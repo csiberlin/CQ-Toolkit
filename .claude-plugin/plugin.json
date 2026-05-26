@@ -1,7 +1,7 @@
 {
   "name": "cq-toolkit",
   "version": "0.1.0",
-  "description": "Code-quality review agents and orchestration commands for C# solutions: business-value extraction, per-project architecture/data/code/test reviews, cross-solution summaries, quality-attribute regrouping, HTML publishing, and implementation-plan generation.",
+  "description": "Code-quality review agents and orchestration commands for C# solutions: business-value extraction, per-project architecture/data/code/test reviews, cross-solution summaries, management summaries regrouped by quality attribute, HTML publishing, and implementation-plan generation.",
   "author": {
     "name": "Mark Sandy"
   },

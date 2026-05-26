@@ -63,5 +63,5 @@ Mark every `TaskCreate` task as `completed` as its agent returns. Do not run `CQ
 ## Constraints
 
 - Do NOT generate or modify production code during this command — read-only review only.
-- Do NOT invoke `CQ-Business-Value`, `CQ-Summary`, `CQ-Domain-Summary`, `CQ-Quality-Attributes`, or `CQ-HTML-Publisher` here. Those are separate workflows.
+- Do NOT invoke `CQ-Business-Value`, `CQ-Summary`, `CQ-Domain-Summary`, `CQ-Management-Summary`, or `CQ-HTML-Publisher` here. Those are separate workflows.
 - Ensure the `CQ-Reviews\` directory exists in the current working directory before dispatching (use `Bash mkdir -p CQ-Reviews`).

@@ -140,7 +140,7 @@ Honour every project rule in `CLAUDE.md` across all eight plans:
   - the summary files produced by `/cq-summary` in Step 4,
   - the eight plan files in Step 6.
   No production source files may be modified.
-- Do not invoke `CQ-HTML-Publisher` or `CQ-Quality-Attributes` here — those are separate workflows. `CQ-Business-Value` IS invoked in Step 2, but only for solutions whose `*-CQ-Purpose.md` file is missing.
+- Do not invoke `CQ-HTML-Publisher` or `CQ-Management-Summary` here — those are separate workflows. `CQ-Business-Value` IS invoked in Step 2, but only for solutions whose `*-CQ-Purpose.md` file is missing.
 - If `/cq-scan` produces zero reports of a given kind, write a one-paragraph placeholder plan for both that kind's DETAILED and SUMMARY files explaining "no findings — nothing to plan" rather than skipping the file (downstream tooling expects all eight paths to exist).
 - If `/cq-summary` fails to produce a per-domain summary file, do NOT generate the corresponding SUMMARY plan — surface the error and stop.
 - The plans are proposals: every task in them must be reversible until the user approves execution.

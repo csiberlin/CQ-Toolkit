@@ -9,7 +9,7 @@ CQ-Toolkit reads a C# repository (one or many `.sln` files) and produces a tiere
 1. **Per-solution purpose** — what the solution does and why it exists (`CQ-Business-Value`).
 2. **Per-project reviews** — Architecture, Data, Code quality, Test quality (`CQ-Architect`, `CQ-Data`, `CQ-Reviewer`, `CQ-Test-Reviewer`).
 3. **Cross-solution summaries** — one per domain plus a top-level brief (`CQ-Summary`, `CQ-Domain-Summary`, `CQ-IntegrationTests-Summary`).
-4. **Quality-attribute regrouping** — Scalability, Readability, Maintainability, Security, Reliability, Test Quality (`CQ-Quality-Attributes`).
+4. **Management summary** — findings regrouped by quality attribute: Scalability, Readability, Maintainability, Security, Reliability, Test Quality (`CQ-Management-Summary`).
 5. **Static HTML site** — browsable index of all the reports (`CQ-HTML-Publisher`).
 6. **Implementation plans** — DETAILED and SUMMARY plans, one of each per CQ domain, ready for review before execution (`/cq-plan`).
 
@@ -51,7 +51,7 @@ Or run the pieces individually:
 
 ```
 /cq-scan [subdir ...]   # per-project reviews only
-# (then dispatch CQ-Summary, CQ-Quality-Attributes, CQ-HTML-Publisher as needed)
+# (then dispatch CQ-Summary, CQ-Management-Summary, CQ-HTML-Publisher as needed)
 ```
 
 ## Conventions

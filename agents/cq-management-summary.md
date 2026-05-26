@@ -1,6 +1,6 @@
 ---
-name: CQ-Quality-Attributes
-description: Reads the existing CQ summary files and regroups their findings into six quality-attribute reports — Scalability, Readability, Maintainability, Security, Reliability, and Test Quality. Each report is a tight, executive-style brief with a Goal, "Risk if you do nothing", and Actions section. Use after CQ-Summary has produced the four cross-solution summaries.
+name: CQ-Management-Summary
+description: Reads the existing CQ summary files and regroups their findings into six executive management briefs — one per quality attribute: Scalability, Readability, Maintainability, Security, Reliability, and Test Quality. Each brief is tight and decision-ready, with a Goal, "Risk if you do nothing", and Actions section. Use after CQ-Summary has produced the four cross-solution summaries.
 tools: Read, Glob, Grep, Write, Bash
 ---
 
