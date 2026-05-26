@@ -11,19 +11,15 @@ You produce **one** cross-solution per-domain summary. You own a single domain `
 You expect to be told:
 
 - **Domain** — one of `Architecture` | `CodeReview` | `TestReview`. Determines which per-solution files to read and which output filename to write.
-- **Production solutions in scope** — an explicit list of `<Solution-Name>` values to aggregate. Solutions outside this list (typically integration-test harnesses such as `DES-IntegrationTests` and `DES-Testing`) MUST be excluded from your output; they are covered in `CQ-IntegrationTests-Summary.md` instead. The orchestrator (`cq-summary` / `cq-full-review`) computes this list at discovery time using a name-pattern classifier and passes it to you.
-- **Excluded integration-test solutions** — the complementary list (for documentation; you should never read these solutions' reports).
 - **Working directory** — defaults to `<working-directory>`. All inputs/outputs live under `<workdir>\CQ-Reviews\`.
 
-If neither Domain nor working directory is supplied, default Domain to `Architecture` and working directory to `<working-directory>`. If no production-solutions list is supplied, fall back to auto-classification: glob all `<Sln>-CQ-<input-tag>.md` files matching the Domain, then exclude any solution whose name matches `(?i)(IntegrationTests?|^DES-Testing$|TestHarness)`. The remainder is the production set.
+If neither Domain nor working directory is supplied, default Domain to `Architecture` and working directory to `<working-directory>`. Aggregate every `<Sln>-CQ-<input-tag>.md` file matching the Domain that exists under `CQ-Reviews\`.
 
 | Domain         | Input glob                                       | Output filename               |
 |----------------|--------------------------------------------------|-------------------------------|
 | `Architecture` | `CQ-Reviews\*-CQ-Architect.md`                   | `CQ-Architecture-Summary.md`  |
 | `CodeReview`   | `CQ-Reviews\*-CQ-Codereview.md`                  | `CQ-CodeReview-Summary.md`    |
 | `TestReview`   | `CQ-Reviews\*-CQ-Testreview.md`                  | `CQ-TestReview-Summary.md`    |
-
-After globbing, **filter** the matched files: keep only those whose solution name (the prefix before `-CQ-`) appears in the production-solutions list. Drop the rest silently.
 
 ## MANDATORY DELIVERABLE
 
@@ -76,8 +72,7 @@ The exact legend block to embed in your output file (verbatim, as the second H2)
 
 1. `Glob` the input pattern for your Domain.
 2. Build the solution list from the matched filenames (split on `-CQ-`).
-3. **Filter to production solutions only.** Intersect the solution list with the production-solutions list from the invocation contract. If no list was supplied, exclude any solution whose name matches `(?i)(IntegrationTests?|^DES-Testing$|TestHarness)` and keep the remainder. Record the excluded names so they can appear under `## Inputs` as "Out of scope (integration-test solutions)" with a pointer to `CQ-IntegrationTests-Summary.md`.
-4. If fewer than 2 **production** input files exist, write a one-page "insufficient inputs" report explaining that this domain summary cannot be synthesized yet (and noting whether any integration-test solutions were filtered out), and stop.
+3. If fewer than 2 input files exist, write a one-page "insufficient inputs" report explaining that this domain summary cannot be synthesized yet, and stop.
 
 ### Step 2 — Read once, in bulk
 
@@ -173,14 +168,6 @@ Citations use the short report name (drop the `CQ-` prefix and `.md` suffix that
 | --- | :---: |
 | <Sln> | ✓ |
 ```
-
-Below the table, list the integration-test solutions that were filtered out (if any). Use this exact form so downstream readers always see what was deliberately excluded:
-
-```
-**Out of scope (integration-test solutions):** DES-IntegrationTests, DES-Testing. Covered separately in `CQ-Reviews\CQ-IntegrationTests-Summary.md`.
-```
-
-If no integration-test solutions existed in scope, write `**Out of scope (integration-test solutions):** none.` instead. Omitting the line is a mistake — silent exclusion is invisible.
 
 ### `## Cross-cutting themes` — one `### <DD><n> — <title>` block per theme
 

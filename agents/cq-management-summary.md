@@ -32,15 +32,7 @@ Read these files from `<working-directory>\CQ-Reviews\`:
 
 These are your **only** inputs. Do not re-derive from the per-solution reports — the four summaries above are the authoritative aggregation. You may `Grep`/`Read` the per-solution reports only to disambiguate a citation when a summary section is unclear.
 
-**Do NOT read `CQ-IntegrationTests-Summary.md`.** Integration-test solutions are deliberately excluded from the four input summaries above and from these six attribute briefs. The integration-test summary is a separate deliverable owned by `cq-integrationtests-summary`; folding it in here would re-introduce the test-harness-vs-production mixing the partition exists to prevent. This is a **hard rule**, not a stylistic preference:
-
-- Never `Read`, `Glob`, or `Grep` `CQ-IntegrationTests-Summary.md` during this run.
-- Never `Read` any `DES-IntegrationTests-CQ-*.md` or `DES-Testing-CQ-*.md` per-solution report — those are the source files behind the integration-test summary and are out of scope here for the same reason.
-- Never cite `IntegrationTests-Summary §IT<n>` in any of the six attribute briefs. If you find yourself reaching for such a citation, the underlying finding is either (a) a production finding that should already be cited via `Architecture-Summary §AR<n>` / `CodeReview-Summary §CR<n>` / `TestReview-Summary §TR<n>` / `Summary §X<n>` (use that citation instead), or (b) genuinely a harness finding that belongs in `CQ-IntegrationTests-Summary.md` and must be dropped from the attribute briefs entirely.
-
-If a row in one of the four production summaries you read happens to mention an integration-test solution by name (e.g. as a historical contrast or an "and the same pattern also appears in DES-IntegrationTests" aside), the row itself is still legitimate input — but **strip the integration-test name and any harness-only sub-clause from the action sentence** before promoting it. The attribute briefs cover production behaviour; harness context is noise.
-
-If fewer than two of the four production summary files exist, stop and write a single `CQ-Scalability.md` explaining which inputs are missing; skip the other five outputs.
+If fewer than two of the four summary files exist, stop and write a single `CQ-Scalability.md` explaining which inputs are missing; skip the other five outputs.
 
 ## Path & citation conventions
 
@@ -63,13 +55,11 @@ A finding from the source summaries belongs in **exactly one** of the six bucket
 
 ### Test-code carve-out (apply this filter FIRST)
 
-The first five buckets (Scalability, Readability, Maintainability, Security, Reliability) cover **production code only**. Test Quality covers **test code inside production solutions only** — i.e. the `*.Tests` projects that ship as part of a production-solution suite. A finding qualifies as "test code inside a production solution" if any of the following is true:
+The first five buckets (Scalability, Readability, Maintainability, Security, Reliability) cover **production code only**. Test Quality covers **test code** — i.e. the test projects (`*.Tests` and the like) reviewed by `CQ-Test-Reviewer`. A finding qualifies as test code if any of the following is true:
 
-- It originates from a per-solution test-review report (`<ProductionSln>-CQ-Testreview.md`) for a production solution.
-- It is sourced from `CQ-TestReview-Summary.md` — every `§TR<n>` theme in that file is production-solution test code by construction (the integration-test solutions are excluded from that summary by Wave 3's partition) and goes to Test Quality.
-- The body of the finding (in `Summary`, `Architecture-Summary`, or `CodeReview-Summary`) names test files, test fixtures, mocks/stubs, test-only DI containers, test runners, Allure/xUnit/NUnit infrastructure, or otherwise concerns code that ships in a test assembly inside a *production* solution.
-
-**Integration-test solutions are NOT routed here.** Findings from `DES-IntegrationTests` and `DES-Testing` (or any future solution matching the integration-test classifier `(?i)(IntegrationTests?|^DES-Testing$|TestHarness)`) live in `CQ-IntegrationTests-Summary.md` and are out of scope for all six buckets, **including Test Quality**. The integration-test harness is its own deliverable; this agent does not aggregate it. If you find a production-summary row whose evidence chain only resolves to an integration-test solution (e.g. an `Architecture-Summary §AR<n>` row whose only evidence bullet is `DES-IntegrationTests-Architect §Findings #4`), the row was incorrectly promoted upstream — drop it from this agent's output and record the rejection in the appropriate brief's `## Rejected candidates` table with `"sole evidence resolves to integration-test solution; belongs in CQ-IntegrationTests-Summary.md"` as the reason.
+- It originates from a per-solution test-review report (`<Sln>-CQ-Testreview.md`).
+- It is sourced from `CQ-TestReview-Summary.md` — every `§TR<n>` theme in that file is test code by construction and goes to Test Quality.
+- The body of the finding (in `Summary`, `Architecture-Summary`, or `CodeReview-Summary`) names test files, test fixtures, mocks/stubs, test-only DI containers, test runners, Allure/xUnit/NUnit infrastructure, or otherwise concerns code that ships in a test assembly.
 
 Symmetric rule: a finding about **production** code that is *hard to test* (missing seams, no DI, hard-coded statics, untestable singletons) stays in **Maintainability** — that is conventional testability of production code, not test-suite quality. Only findings about the test code itself go to Test Quality.
 
@@ -78,7 +68,7 @@ Symmetric rule: a finding about **production** code that is *hard to test* (miss
 - **Maintainability** — anything that affects the cost of **changing** the code safely over time. Examples: duplicated code across solutions, missing or weak tests, tight coupling, hidden global state, missing DI, brittle configuration, lack of seams, dead code, drifted dependencies, missing CI gates, missing contracts, package version sprawl, fragmented patterns for the same concern.
 - **Security** — anything that affects confidentiality, integrity, authentication, authorization, secret/credential handling, or exposure of sensitive data (including PII). Examples: procedural/scattered authz checks, missing resource-based policies, `AllowAnyOrigin` CORS, debug-only signature validation, Swagger or break-glass endpoints exposed in production, hard-coded prod URLs or secrets, PII/secret leakage into logs or telemetry, missing auth handler registration, `[AllowAnonymous]` on sensitive endpoints, weak transport/cert handling on the auth path.
 - **Reliability** — anything that affects correctness, durability, or graceful failure of a single request or workflow (as opposed to behavior under load, which is Scalability). Examples: transactions held across external calls that will abort on retry, `DateTime.Now` vs `UtcNow` correctness bugs, poison-message black holes, silent null returns that corrupt state (e.g. null ETag with `If-Match: *`), saga compensation gaps, bimodal/incorrect error contracts, swallowed exceptions on critical paths, missing idempotency on retried operations.
-- **Test Quality** — anything about the **test code itself**: coverage gaps, missing test categories (unit/integration/contract/load), brittle or flaky tests, fixture/test-data quality, duplication in test code, mock-vs-real strategy (e.g. mocked DB diverging from prod migration), slow test suites, missing assertions, weak arrange/act/assert structure, integration-test reliability, test naming, missing CI gates around the test suite, secret/PII handling inside test artifacts. This bucket is the home for every finding sourced from `CQ-TestReview-Summary.md`, any `*_TestReview.md`, or any `DES-IntegrationTest_*.md`.
+- **Test Quality** — anything about the **test code itself**: coverage gaps, missing test categories (unit/integration/contract/load), brittle or flaky tests, fixture/test-data quality, duplication in test code, mock-vs-real strategy (e.g. mocked DB diverging from prod migration), slow test suites, missing assertions, weak arrange/act/assert structure, integration-test reliability, test naming, missing CI gates around the test suite, secret/PII handling inside test artifacts. This bucket is the home for every finding sourced from `CQ-TestReview-Summary.md` or any `*_TestReview.md`.
 
 ### Source-agent Category mapping
 
@@ -270,7 +260,7 @@ Walk the file once and confirm:
 6. **Top 6 actions**: numbered 1–6, every item ends with a valid citation in short-name form (drop `CQ-` and `.md`).
 7. **Future to-dos**: either ≤6 bullets, or the literal line `_None at this time._`.
 8. Every citation tag exists in the corresponding source file (re-grep the section header in memory — drop the row if it doesn't).
-9. No item appears in two of the six output files (a finding belongs to exactly one bucket). In particular, no test-code finding leaks into the five production-code briefs, and **no integration-test finding leaks into any of the six briefs** — every action's evidence chain must terminate in a production-summary or production-solution citation, never `IntegrationTests-Summary §IT<n>` or `DES-IntegrationTests-*` / `DES-Testing-*`.
+9. No item appears in two of the six output files (a finding belongs to exactly one bucket). In particular, no test-code finding leaks into the five production-code briefs — every action's evidence chain must terminate in a summary or per-solution citation.
 10. **Top 6** is ordered highest-impact first (#1 is the most valuable action); **Future to-dos** is ordered highest-impact first within its own tier. Re-read the list and confirm the ordering reflects impact × tractability, not the order findings happened to be extracted in.
 
 If any check fails, fix the file before writing.
