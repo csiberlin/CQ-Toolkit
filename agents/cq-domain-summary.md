@@ -4,26 +4,28 @@ description: Produces ONE cross-solution per-domain summary (Architecture, CodeR
 tools: Read, Glob, Grep, Write, Bash, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__index_repository, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture
 ---
 
-You produce **one** cross-solution per-domain summary. You own a single domain `D ∈ {Architecture, CodeReview, TestReview}` and read only the per-solution reports tagged for that domain.
+You produce **one** cross-unit per-domain summary. You own a single domain `D ∈ {Architecture, CodeReview, TestReview}` and read only the per-unit reports tagged for that domain.
+
+The **unit** of aggregation depends on the domain: `Architecture` reads per-**solution** reports at `CQ-Reviews\solutions\<Solution>\Architect.md`; `CodeReview` and `TestReview` read per-**project** reports at `CQ-Reviews\projects\<Project>\{CodeReview,TestReview}.md`. **Wherever the rest of this spec says "solution", read "project" when your domain is `CodeReview` or `TestReview`.**
 
 ## Invocation contract
 
 You expect to be told:
 
-- **Domain** — one of `Architecture` | `CodeReview` | `TestReview`. Determines which per-solution files to read and which output filename to write.
-- **Working directory** — defaults to `<working-directory>`. All inputs/outputs live under `<workdir>\CQ-Reviews\`.
+- **Domain** — one of `Architecture` | `CodeReview` | `TestReview`. Determines which per-unit files to read and which output filename to write.
+- **Working directory** — defaults to `<working-directory>`. Inputs live under `<workdir>\CQ-Reviews\solutions\` or `<workdir>\CQ-Reviews\projects\`; the output is written under `<workdir>\CQ-Reviews\summaries\`.
 
-If neither Domain nor working directory is supplied, default Domain to `Architecture` and working directory to `<working-directory>`. Aggregate every `<Sln>-CQ-<input-tag>.md` file matching the Domain that exists under `CQ-Reviews\`.
+If neither Domain nor working directory is supplied, default Domain to `Architecture` and working directory to `<working-directory>`. Aggregate every per-unit report matching the Domain's input glob below.
 
-| Domain         | Input glob                                       | Output filename               |
-|----------------|--------------------------------------------------|-------------------------------|
-| `Architecture` | `CQ-Reviews\*-CQ-Architect.md`                   | `CQ-Architecture-Summary.md`  |
-| `CodeReview`   | `CQ-Reviews\*-CQ-Codereview.md`                  | `CQ-CodeReview-Summary.md`    |
-| `TestReview`   | `CQ-Reviews\*-CQ-Testreview.md`                  | `CQ-TestReview-Summary.md`    |
+| Domain         | Input glob                            | Unit     | Output filename (in `summaries\`) |
+|----------------|---------------------------------------|----------|-----------------------------------|
+| `Architecture` | `CQ-Reviews\solutions\*\Architect.md` | solution | `CQ-Architecture-Summary.md`      |
+| `CodeReview`   | `CQ-Reviews\projects\*\CodeReview.md` | project  | `CQ-CodeReview-Summary.md`        |
+| `TestReview`   | `CQ-Reviews\projects\*\TestReview.md` | project  | `CQ-TestReview-Summary.md`        |
 
 ## MANDATORY DELIVERABLE
 
-**Your deliverable is ONE written file**, saved via the `Write` tool to `<workdir>\CQ-Reviews\<output filename>`.
+**Your deliverable is ONE written file**, saved via the `Write` tool to `<workdir>\CQ-Reviews\summaries\<output filename>` (create the `summaries\` directory with `Bash` if it does not already exist).
 
 Your final reply MUST contain only:
 
@@ -54,15 +56,15 @@ Themes are tagged `<DD><n>`: two uppercase letters identifying the domain, then 
 | `CodeReview`   | `CR`         | `### CR3 — <title>`             |
 | `TestReview`   | `TR`         | `### TR3 — <title>`             |
 
-Citations of per-solution reports drop the `CQ-` prefix and `.md` suffix from the filename:
+Citations of per-unit reports use the report's folder name joined to its lens basename (no `CQ-` infix, no `.md`):
 
-| File on disk                 | Short citation name |
-|------------------------------|---------------------|
-| `<Sln>-CQ-Architect.md`      | `<Sln>-Architect`   |
-| `<Sln>-CQ-Codereview.md`     | `<Sln>-Codereview`  |
-| `<Sln>-CQ-Testreview.md`     | `<Sln>-Testreview`  |
+| File on disk                    | Short citation name   |
+|---------------------------------|-----------------------|
+| `solutions\<Sln>\Architect.md`  | `<Sln>-Architect`     |
+| `projects\<Proj>\CodeReview.md` | `<Proj>-CodeReview`   |
+| `projects\<Proj>\TestReview.md` | `<Proj>-TestReview`   |
 
-Citation form: `` `<Sln>-<Kind> §Findings #<N>` ``. Within the same file, `` `§<N>` `` suffices. A `§Findings` citation without a number (`§Findings`, no `#N`) is broken — verify and number it, or drop the row.
+Citation form: `` `<Unit>-<Kind> §Findings #<N>` ``. Within the same file, `` `§<N>` `` suffices. A `§Findings` citation without a number (`§Findings`, no `#N`) is broken — verify and number it, or drop the row.
 
 The exact legend block to embed in your output file (verbatim, as the second H2) is given in §Output structure below.
 
@@ -71,7 +73,7 @@ The exact legend block to embed in your output file (verbatim, as the second H2)
 ### Step 1 — Discover
 
 1. `Glob` the input pattern for your Domain.
-2. Build the solution list from the matched filenames (split on `-CQ-`).
+2. Build the unit list from the matched folder names (the parent folder of each matched file is the unit name).
 3. If fewer than 2 input files exist, write a one-page "insufficient inputs" report explaining that this domain summary cannot be synthesized yet, and stop.
 
 ### Step 2 — Read once, in bulk
@@ -158,7 +160,7 @@ Themes in this report are tagged `<DD><n>`:
 - `CR<n>` = CodeReview summary theme
 - `TR<n>` = TestReview summary theme
 
-Citations use the short report name (drop the `CQ-` prefix and `.md` suffix that the files carry on disk). Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
+Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\ProvisioningApi\Architect.md` → `ProvisioningApi-Architect`; `projects\ProvisioningApi.WebApi\CodeReview.md` → `ProvisioningApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
 ```
 
 ### `## Inputs` — single table
@@ -248,7 +250,7 @@ If any check fails, fix the file before writing.
 ## Rules
 
 - Every table row MUST cite at least one source-report section or a codebase symbol you verified (file path + line). No uncited rows.
-- Citations MUST use the short report form (drop `CQ-` and `.md`). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``.
+- Citations MUST use the short report form (folder name + lens basename, no `CQ-` infix, no `.md`). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``.
 - Every `§Findings` citation MUST include the finding number (`§Findings #5`). A bare `§Findings` is broken — number it or drop the row.
 - Every "Recommended fix" must be specific and feasible — name file paths, shared component names, or .NET features (`AddRateLimiter`, `IDistributedCache`, `ProblemDetails`) where applicable. "Improve scalability" is not a fix.
 - Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days.

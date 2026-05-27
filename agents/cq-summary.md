@@ -13,14 +13,14 @@ You may dig into the codebase (`Glob`, `Grep`, `Read`) and codebase-memory MCP t
 
 ## MANDATORY DELIVERABLE — READ THIS FIRST
 
-**Your deliverable is FOUR written files, not a chat reply.** All land in `<working-directory>\CQ-Reviews\` (create the directory with `Bash` if it does not already exist):
+**Your deliverable is FOUR written files, not a chat reply.** All land in `<working-directory>\CQ-Reviews\summaries\` (create the directory with `Bash` if it does not already exist):
 
-1. `CQ-Architecture-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = Architecture).
-2. `CQ-CodeReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = CodeReview).
-3. `CQ-TestReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = TestReview).
-4. `CQ-Summary.md` — written by you directly via the `Write` tool, after the three sub-agents finish.
+1. `summaries\CQ-Architecture-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = Architecture).
+2. `summaries\CQ-CodeReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = CodeReview).
+3. `summaries\CQ-TestReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = TestReview).
+4. `summaries\CQ-Summary.md` — written by you directly via the `Write` tool, after the three sub-agents finish.
 
-If fewer than 2 solutions have any reports, write a one-page `CQ-Summary.md` explaining the gap and skip files #1–#3.
+If fewer than 2 solutions have any reports, write a one-page `summaries\CQ-Summary.md` explaining the gap and skip files #1–#3.
 
 Write order is **strict**: Phase A dispatches three `cq-domain-summary` sub-agents in parallel (one per domain); you wait for ALL of them to write their files; only then do you read the three domain summaries back from disk and build the top-level summary. The top-level summary is a summary of summaries — not a re-derivation from the original per-solution reports.
 
@@ -44,7 +44,7 @@ The working directory is `<working-directory>`. Every **filesystem path** that a
 
 The ONLY absolute paths you may emit are the four in your final orchestrator confirmation (the paths of the report files you just wrote). Everything *inside* the reports is relative.
 
-**Citations of other reports are NOT paths** — they use the short-name form defined under §Reference nomenclature below (e.g. `` `ProvisioningApi-Architect §Findings #5` ``). Do not write report citations as `CQ-Reviews\ProvisioningApi-CQ-Architect.md`; that's a filesystem path, not a citation.
+**Citations of other reports are NOT paths** — they use the short-name form defined under §Reference nomenclature below (e.g. `` `ProvisioningApi-Architect §Findings #5` ``). Do not write report citations as `CQ-Reviews\solutions\ProvisioningApi\Architect.md`; that's a filesystem path, not a citation.
 
 ## Reference nomenclature
 
@@ -62,19 +62,19 @@ Themes are tagged `<DD><n>`: two uppercase letters identifying the source summar
 
 ### Citation shortening — drop `CQ-` and `.md`
 
-Citations refer to other reports by a **short name**, never the full filename. The actual files on disk still carry the `CQ-` prefix and `.md` suffix, but those are redundant in every citation context, so they MUST be omitted to keep the prose readable.
+Citations refer to other reports by a **short name**, never the full filename or path. For **per-unit reports** the short name is the report's folder joined to its lens basename (no `CQ-` infix, no `.md`). For **summary files** it is the filename with the `CQ-` prefix and `.md` suffix dropped. In every case the short name is what goes in a citation.
 
 | File on disk                          | Short name in citations         |
 |---------------------------------------|---------------------------------|
-| `CQ-Summary.md`                       | `Summary`                       |
-| `CQ-Architecture-Summary.md`          | `Architecture-Summary`          |
-| `CQ-CodeReview-Summary.md`            | `CodeReview-Summary`            |
-| `CQ-TestReview-Summary.md`            | `TestReview-Summary`            |
-| `<Sln>-CQ-Architect.md`               | `<Sln>-Architect`               |
-| `<Sln>-CQ-Codereview.md`              | `<Sln>-Codereview`              |
-| `<Sln>-CQ-Data.md`                    | `<Sln>-Data`                    |
-| `<Sln>-CQ-Testreview.md`              | `<Sln>-Testreview`              |
-| `<Sln>-CQ-Purpose.md`                 | `<Sln>-Purpose`                 |
+| `summaries\CQ-Summary.md`             | `Summary`                       |
+| `summaries\CQ-Architecture-Summary.md`| `Architecture-Summary`          |
+| `summaries\CQ-CodeReview-Summary.md`  | `CodeReview-Summary`            |
+| `summaries\CQ-TestReview-Summary.md`  | `TestReview-Summary`            |
+| `solutions\<Sln>\Architect.md`        | `<Sln>-Architect`               |
+| `projects\<Proj>\CodeReview.md`       | `<Proj>-CodeReview`             |
+| `projects\<Proj>\Data.md`             | `<Proj>-Data`                   |
+| `projects\<Proj>\TestReview.md`       | `<Proj>-TestReview`             |
+| `solutions\<Sln>\Purpose.md`          | `<Sln>-Purpose`                 |
 
 **Citation form:** `` `<short-name> §<tag>` `` — e.g. `` `Architecture-Summary §AR2` `` or `` `ProvisioningApi-Architect §Findings #5` ``. Within the same file, `` `§<tag>` `` alone is sufficient. Across files (only legal inside `Summary`), the short name is required.
 
@@ -86,9 +86,9 @@ Architecture-Summary §AR2 → ProvisioningApi-Architect §Findings #5
 
 **Anti-examples — do NOT emit:**
 
-- ❌ `` `ProvisioningApi-CQ-Architect.md §Findings #5` `` — drop `CQ-` and `.md`.
-- ❌ `` `CQ-Architecture-Summary.md §AR2` `` — drop `CQ-` and `.md`.
-- ❌ `` `ProvisioningApi-Architect.md §Findings #5` `` — drop `.md` even when `CQ-` was already absent.
+- ❌ `` `solutions\ProvisioningApi\Architect.md §Findings #5` `` — that's a path; cite `` `ProvisioningApi-Architect §Findings #5` ``.
+- ❌ `` `CQ-Architecture-Summary.md §AR2` `` — drop `CQ-` and `.md`: `` `Architecture-Summary §AR2` ``.
+- ❌ `` `ProvisioningApi-Architect.md §Findings #5` `` — drop the `.md` suffix.
 - ❌ `` `ProvisioningApi-Architect §Findings` `` — section must be specific. Always cite the numbered finding (`§Findings #5`), never a bare `§Findings`. A citation without a target is not a citation.
 
 **Legend block to embed in every summary file (verbatim):**
@@ -103,7 +103,7 @@ Themes in this report are tagged `<DD><n>`:
 - `X<n>`  = cross-cutting theme in Summary
 - `C<n>`  = consolidation opportunity in Summary
 
-Citations use the short report name (drop the `CQ-` prefix and `.md` suffix that the files carry on disk). Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
+Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\ProvisioningApi\Architect.md` → `ProvisioningApi-Architect`; `projects\ProvisioningApi.WebApi\CodeReview.md` → `ProvisioningApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
 ```
 
 Place the legend block as the **second** H2 in each summary file, immediately after `## Inputs`.
@@ -112,17 +112,17 @@ Place the legend block as the **second** H2 in each summary file, immediately af
 
 Source documents (under `<working-directory>\CQ-Reviews\`):
 
-- `<Solution>-CQ-Architect.md` — architectural review per solution. **Sole input class for `CQ-Architecture-Summary.md`.**
-- `<Solution>-CQ-Codereview.md` — code-quality review per solution. **Sole input class for `CQ-CodeReview-Summary.md`.**
-- `<Solution>-CQ-Testreview.md` — test-quality review per solution. **Sole input class for `CQ-TestReview-Summary.md`.**
-- `<Solution>-CQ-Purpose.md` — purpose & business-value brief (optional, used for domain context only — do NOT copy business-value statements into any summary).
+- `solutions\<Solution>\Architect.md` — architectural review per solution. **Sole input class for `CQ-Architecture-Summary.md`.**
+- `projects\<Project>\CodeReview.md` — code-quality review per project. **Sole input class for `CQ-CodeReview-Summary.md`.**
+- `projects\<Project>\TestReview.md` — test-quality review per project. **Sole input class for `CQ-TestReview-Summary.md`.**
+- `solutions\<Solution>\Purpose.md` — purpose & business-value brief (optional, used for domain context only — do NOT copy business-value statements into any summary).
 
-Inputs for `CQ-Summary.md` (Phase B) — read from disk after Phase A completes:
+Inputs for `CQ-Summary.md` (Phase B) — read from disk (under `summaries\`) after Phase A completes:
 
-- `CQ-Architecture-Summary.md`
-- `CQ-CodeReview-Summary.md`
-- `CQ-TestReview-Summary.md`
-- (Optional re-verification only) the original per-solution reports listed above.
+- `summaries\CQ-Architecture-Summary.md`
+- `summaries\CQ-CodeReview-Summary.md`
+- `summaries\CQ-TestReview-Summary.md`
+- (Optional re-verification only) the original per-unit reports listed above.
 
 If fewer than 2 solutions have at least one report, **stop and write `CQ-Summary.md` as a one-page report explaining there is nothing to synthesize yet** and which inputs are missing. In this degenerate case the three domain summaries may be skipped — clearly state so in `CQ-Summary.md`.
 
@@ -139,8 +139,8 @@ Ignore previous-generation `CQ-*-Summary.md` files in the folder when *reading* 
 
 ### 1. Discover
 
-1. `Glob` `CQ-Reviews/*.md` and split filenames on `-CQ-` to derive `{Solution, ReportType}` pairs.
-2. Build an inventory: for each solution, mark which of `{Purpose, Architect, Codereview, Data, Testreview}` exist.
+1. `Glob` `CQ-Reviews/solutions/*/*.md` and `CQ-Reviews/projects/*/*.md`; derive `{Unit, Lens}` from each match's parent folder (the unit) and basename (the lens).
+2. Build an inventory: for each solution, mark which of `{Purpose, Architect}` exist; for each project, mark which of `{CodeReview, Data, TestReview}` exist.
 3. If `<2` solutions exist OR the solutions have `<2` reports each on average, write a short "insufficient inputs" report into `CQ-Summary.md` and stop.
 
 ### 2. Phase A — produce the per-domain summaries (in parallel)
@@ -161,9 +161,10 @@ Follow the workflow defined at:
   <working-directory>\.claude\agents\cq-domain-summary.md
 
 Read that agent definition first so you have the full spec, then execute it.
-Discover your inputs by globbing CQ-Reviews\*-CQ-<input-tag>.md (where the
-input tag matches your Domain). Write your output to:
-  CQ-Reviews\CQ-<Domain>-Summary.md
+Discover your inputs with the input glob for your Domain (Architecture:
+CQ-Reviews\solutions\*\Architect.md; CodeReview: CQ-Reviews\projects\*\CodeReview.md;
+TestReview: CQ-Reviews\projects\*\TestReview.md). Write your output to:
+  CQ-Reviews\summaries\CQ-<Domain>-Summary.md
 
 When complete, reply with: the absolute output path, the Domain, K (themes
 promoted), R (findings rejected), and source reports consumed.
@@ -257,21 +258,27 @@ Required header counters block (exact line, immediately under the H1):
 
 ### Top-level section schemas
 
-**`## Inputs`** — single table covering every solution scanned:
+**`## Inputs`** — a per-solution table (Architect/Purpose) and a per-project table (CodeReview/Data/TestReview):
 
 ```
-| Solution | Architect | Codereview | Data | Testreview | Purpose |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| <Sln> | ✓ | ✓ | ✓ | – | ✓ |
+| Solution | Architect | Purpose |
+| --- | :---: | :---: |
+| <Sln> | ✓ | ✓ |
 ```
 
-Below the table, list the three domain summaries that were consumed:
+```
+| Project | Solution | CodeReview | Data | TestReview |
+| --- | --- | :---: | :---: | :---: |
+| <Proj> | <Sln> | ✓ | ✓ | – |
+```
+
+Below the tables, list the three domain summaries that were consumed:
 
 ```
 **Domain summaries consumed:**
-- `CQ-Reviews\CQ-Architecture-Summary.md`
-- `CQ-Reviews\CQ-CodeReview-Summary.md`
-- `CQ-Reviews\CQ-TestReview-Summary.md`
+- `CQ-Reviews\summaries\CQ-Architecture-Summary.md`
+- `CQ-Reviews\summaries\CQ-CodeReview-Summary.md`
+- `CQ-Reviews\summaries\CQ-TestReview-Summary.md`
 ```
 
 **`## Cross-cutting themes`** — one `### X<n> — <title>` block per theme, in the order `X1`, `X2`, …. Hard cap: **≤8 themes**. Themes here should preferentially be **cross-domain** (touch ≥2 of Architecture/CodeReview/TestReview); single-domain themes already covered in a domain summary should only be re-promoted if they carry portfolio-level risk worth re-flagging.
@@ -410,7 +417,7 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 ## Rules
 
 - Every table row MUST cite at least one source-report section (or — in `Summary` — at least one domain-summary section) or a codebase symbol you verified (file path + line). No uncited rows.
-- Citations MUST use the short report form (drop `CQ-` and `.md`). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``. See §Reference nomenclature for the full mapping.
+- Citations MUST use the short report form (folder name + lens basename for per-unit reports; drop `CQ-` and `.md` for summaries). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``. See §Reference nomenclature for the full mapping.
 - Every `§Findings` citation MUST be specific: include the finding number (`§Findings #5`). A bare `§Findings` is a broken reference — verify and number it, or drop the row.
 - Every "Recommended fix" must be specific and feasible — name file paths, shared component names, or .NET features (`AddRateLimiter`, `IDistributedCache`, `ProblemDetails`, etc.) where applicable. "Improve scalability" is not a fix.
 - Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days. Use the same scale across all four files.

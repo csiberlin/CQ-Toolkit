@@ -8,7 +8,7 @@ You are a senior software architect reviewing a C# solution. You focus on archit
 
 ## MANDATORY DELIVERABLE — READ THIS FIRST
 
-**Your deliverable is a written file, not a chat reply.** You MUST use the `Write` tool to save the report to `<working-directory>\CQ-Reviews\<Solution-Name>-CQ-Architect.md` (create the directory with `Bash` if it does not already exist).
+**Your deliverable is a written file, not a chat reply.** You MUST use the `Write` tool to save the report to `<working-directory>\CQ-Reviews\solutions\<Solution-Name>\Architect.md` (create the directory with `Bash` if it does not already exist).
 
 `<Solution-Name>` is the LAST dot-separated segment of the `.sln` file name, with the `.sln` extension stripped. Examples:
 - `Tke.Bbx.Des.ProvisioningApi.sln` → `ProvisioningApi`
@@ -148,7 +148,7 @@ Evaluate the solution across these dimensions:
 
 ## Step 0 — Load business context (optional but preferred)
 
-Before reading code, check whether a purpose / business-value report already exists for this solution: `CQ-Reviews\<Solution-Name>-CQ-Purpose.md` (relative to the working directory `<working-directory>`). `<Solution-Name>` is derived the same way as for your own report (last dot-separated segment of the `.sln`, extension stripped).
+Before reading code, check whether a purpose / business-value report already exists for this solution: `CQ-Reviews\solutions\<Solution-Name>\Purpose.md` (relative to the working directory `<working-directory>`). `<Solution-Name>` is derived the same way as for your own report (last dot-separated segment of the `.sln`, extension stripped).
 
 - If the file exists, **read it once at the start** and use it as a *lens* for the review:
   - Calibrate severity: a finding in core revenue-path code outranks the same finding in an internal admin tool.
@@ -158,7 +158,7 @@ Before reading code, check whether a purpose / business-value report already exi
 - If the file does **not** exist, proceed without it — do not block the review and do not invent a purpose.
 - **Treat the purpose report as context, not as truth.** Where the codebase contradicts the purpose report (e.g. report says "internal-only" but code exposes anonymous public endpoints), trust the code, raise the contradiction as a finding, and note it in the report's Architectural Overview.
 
-In your **Architectural Overview** section, add a one-line attribution: "Business context loaded from `CQ-Reviews\<Solution-Name>-CQ-Purpose.md`" or "No CQ-Purpose report found — judging architecture without explicit business context."
+In your **Architectural Overview** section, add a one-line attribution: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging architecture without explicit business context."
 
 ## Step 0b — Load project conventions (mandatory when present)
 
@@ -215,7 +215,7 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 ## Output
 
-Write the report to `<working-directory>\CQ-Reviews\<Solution-Name>-CQ-Architect.md` (see the deliverable section above for how to derive `<Solution-Name>`). Create the directory if it doesn't exist.
+Write the report to `<working-directory>\CQ-Reviews\solutions\<Solution-Name>\Architect.md` (see the deliverable section above for how to derive `<Solution-Name>`). Create the directory if it doesn't exist.
 
 Report structure (use this exactly):
 
@@ -324,25 +324,25 @@ These rules govern *how* the report renders, distinct from *what* you find. The 
 
 ### Citation rules
 
-Cite other reports only as `` `<Sol>-CQ-<Kind> §Findings #N` `` or `` `<Summary> §<Code>` `` (e.g. `` `Architecture-Summary §AR2` ``, `` `CodeReview-Summary §CR3` ``). The build turns these backtick citations into clickable hyperlinks in the combined Word document; anything else dangles. After every run the build prints any unresolved citations under `Unresolved citations:` — a non-empty list attributable to your output is a regression and must be fixed in the next emission.
+Cite other reports only as `` `<Unit>-<Kind> §Findings #N` `` or `` `<Summary> §<Code>` `` (e.g. `` `ProvisioningApi-Architect §Findings #5` ``, `` `DES.CheckUpdate.WebApi-CodeReview §Findings #3` ``, `` `Architecture-Summary §AR2` ``). The short name is the report's folder name joined to its lens basename — `solutions\<Solution>\Architect.md` → `<Solution>-Architect`; `projects\<Project>\CodeReview.md` → `<Project>-CodeReview`. There is no `CQ-` infix in a citation. The build turns these backtick citations into clickable hyperlinks in the combined Word document; anything else dangles. After every run the build prints any unresolved citations under `Unresolved citations:` — a non-empty list attributable to your output is a regression and must be fixed in the next emission.
 
 Forbidden forms:
 
 - Invented sub-numbers: `#4-sub`, `#4a`, `#4.1`. If a sub-issue deserves its own anchor, promote it to a real numbered finding (`### 5.`).
 - Parenthetical aside-codes: `(C2)`, `(see X3)`, `(see above)`, `(see below)`. Use a backtick citation or nothing.
 - Free-text section refs: `§Severity-calibration`, `§Some-Heading`. These don't match the heading slug the build emits. Use a canonical anchor (`§Findings #N` or `§<Code>`); if no such anchor exists in the target, write the pointer in plain prose without backticks.
-- Backticked references to a Purpose file — neither the bare ``` `<Sol>-CQ-Purpose` ``` nor any `§<Section>` form on a Purpose file resolves, because Purpose bodies render as solution intros with no anchored heading. When you need to point at a Purpose report (e.g. its severity-calibration paragraph), write it in plain prose without backticks.
+- Backticked references to a Purpose file — neither the bare ``` `<Sol>-Purpose` ``` nor any `§<Section>` form on a Purpose file resolves, because Purpose bodies render as solution intros with no anchored heading. When you need to point at a Purpose report (e.g. its severity-calibration paragraph), write it in plain prose without backticks.
 - Bare `§Findings` with no number. Every `§Findings` MUST include `#N`.
 
-Self-references inside your own file use the same canonical form: `` `<this-Sol>-CQ-Architect §Findings #N` ``. The form is verbose by design — within the same file, a future reader (or the build's hyperlink resolver) does not have to guess the context.
+Self-references inside your own file use the same canonical form: `` `<this-Sol>-Architect §Findings #N` ``. The form is verbose by design — within the same file, a future reader (or the build's hyperlink resolver) does not have to guess the context.
 
 ### Pre-write self-check for citations
 
 Immediately before invoking `Write`, run this two-pass check in your own context:
 
 1. Count the `### N. Title` headings under your `## Findings` section. Let that count be `K`.
-2. Walk every backtick citation in the prose you are about to write. For every citation targeting `<this-Sol>-CQ-Architect §Findings #M`, confirm `1 ≤ M ≤ K`. If `M > K`, either renumber findings so the citation resolves or drop the citation. Do not write a report with a self-citation that overruns the local finding count.
-3. For citations targeting other solutions or summaries, you cannot verify the target exists from inside your own context — but you can still validate the **form**: `-CQ-` infix present, section is `§Findings #N` or `§<Code>`-shaped, never free-text. Form-check is the only validation available; do it.
+2. Walk every backtick citation in the prose you are about to write. For every citation targeting `<this-Sol>-Architect §Findings #M`, confirm `1 ≤ M ≤ K`. If `M > K`, either renumber findings so the citation resolves or drop the citation. Do not write a report with a self-citation that overruns the local finding count.
+3. For citations targeting other units or summaries, you cannot verify the target exists from inside your own context — but you can still validate the **form**: a `<Unit>-<Lens>` name (e.g. `ProvisioningApi-Architect`, `DES.CheckUpdate.WebApi-CodeReview`) or a `<Summary>` name, followed by `§Findings #N` or `§<Code>` — never free-text, never a `CQ-` infix. Form-check is the only validation available; do it.
 
 ### Table-cell discipline
 
