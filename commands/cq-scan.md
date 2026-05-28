@@ -1,5 +1,5 @@
 ---
-description: Scan all C# solutions in the given subdirectories (or current dir) for C# projects, then dispatch CQ-Data + CQ-Architect + CQ-Reviewer per production project and CQ-Test-Reviewer per test project.
+description: Scan all C# solutions in the given subdirectories (or current dir), then dispatch CQ-Architect per solution, CQ-Reviewer (+ CQ-Data where a data layer exists) per production project, and CQ-Test-Reviewer per test project.
 argument-hint: [subdir1 subdir2 ...]
 ---
 
@@ -34,29 +34,32 @@ Read each `.csproj` once with `Read` to do this classification.
 
 ### 3. Dispatch agents in parallel
 
-Create a `TaskCreate` task per project so progress is visible, then **launch all agents in a single message with multiple `Agent` tool calls** so they run concurrently.
+The review unit differs by lens: **Architecture is per solution**, the **code lenses are per project**. Create a `TaskCreate` task per unit of work so progress is visible, then **launch agents in a single message with multiple `Agent` tool calls** so they run concurrently.
 
-For each **production** project, spawn THREE agents in parallel:
-- `subagent_type: "CQ-Data"` — data-layer review
-- `subagent_type: "CQ-Architect"` — architecture review
-- `subagent_type: "CQ-Reviewer"` — code-quality review
+Per **solution** (`.sln`), spawn ONE agent:
+- `subagent_type: "CQ-Architect"` — architecture review of the whole solution.
+
+For each **production** project, spawn:
+- `subagent_type: "CQ-Reviewer"` — code-quality review (always).
+- `subagent_type: "CQ-Data"` — data-layer review, **only if** the project's `.csproj` references a data-access package (`Microsoft.EntityFrameworkCore.*`, `Dapper*`, `NHibernate`, `Npgsql`, `Microsoft.Data.SqlClient`, `System.Data.SqlClient`, `MySql.Data`, `Oracle.ManagedDataAccess.*`, `RepoDB*`, `linq2db`). Skip it for projects with no data layer.
 
 For each **test** project, spawn ONE agent:
-- `subagent_type: "CQ-Test-Reviewer"` — test-quality review
+- `subagent_type: "CQ-Test-Reviewer"` — test-quality review.
 
-Each `Agent` prompt MUST tell the agent:
-- The absolute path of the `.csproj` to analyze.
-- That the **working directory** is the current shell working directory and reports must be written to `<cwd>\CQ-Reviews\<ProjectName>-CQ-<Kind>.md` (the agents already follow this convention via the `<working-directory>` placeholder in their definitions).
-- `<ProjectName>` is the `.csproj` filename without extension.
+Each `Agent` prompt MUST tell the agent that the **working directory** is the current shell working directory (the agents resolve the `<working-directory>` placeholder to it), plus:
+- **CQ-Architect** — the absolute path of the `.sln` and its `<Solution-Name>` (last dot-separated segment of the `.sln` file name, extension stripped). It writes `<cwd>\CQ-Reviews\solutions\<Solution-Name>\Architect.md`.
+- **CQ-Reviewer / CQ-Data / CQ-Test-Reviewer** — the absolute path of the target `.csproj`, its `<Project-Name>` (`.csproj` filename without extension), and the `<Solution-Name>` of the owning solution (used for the Purpose lookup and severity calibration). They write `<cwd>\CQ-Reviews\projects\<Project-Name>\<Lens>.md` (`<Lens>` ∈ `CodeReview` / `Data` / `TestReview`).
 
-Be mindful of parallelism: if there are many projects, batch the `Agent` calls in groups of 6–10 per message rather than firing hundreds at once.
+Be mindful of parallelism: if there are many units, batch the `Agent` calls in groups of 6–10 per message rather than firing hundreds at once.
 
 ### 4. Wait and report
 
 After every batch returns, collect the report paths each agent emitted and present a summary table:
 
-| Project | Kind | Report |
-|---------|------|--------|
+| Unit (solution / project) | Kind | Report |
+|---------------------------|------|--------|
+
+Also surface the solution-wide **coverage gap**: list any production project that has **no** corresponding test project — this per-project review can't see that, so report it here.
 
 Mark every `TaskCreate` task as `completed` as its agent returns. Do not run `CQ-Summary` automatically — the user can invoke that separately when all per-project reports are in place.
 
