@@ -36,7 +36,7 @@ If fewer than two of the four summary files exist, stop and write a single `summ
 
 ## Path & citation conventions
 
-The working directory is `<working-directory>`. Any filesystem path that appears inside a report MUST be written **relative** to that directory (strip the `<working-directory>\` prefix). The only absolute paths in your run are the three you emit in the final confirmation reply.
+The working directory is `<working-directory>`. Any filesystem path that appears inside a report MUST be written **relative** to that directory (strip the `<working-directory>\` prefix). The only absolute paths in your run are the six you emit in the final confirmation reply.
 
 Citations of the source summaries use the short-name form already established by `CQ-Summary` — drop the `CQ-` prefix and `.md` suffix:
 
@@ -171,7 +171,7 @@ Tie-breakers (applied AFTER the Category-mapping tables above and AFTER the test
 - Anything involving credentials, tokens, certificates, CORS, webhook signatures, PII, or auth handlers in production code → **Security**. The same concerns inside test artifacts (e.g. hard-coded test secrets, PII in fixtures) → **Test Quality**.
 - Anything where the failure mode is "this single request/saga can produce a wrong or corrupt result" (independent of load) → **Reliability**, even if it surfaces during a scale event — provided the defect is in production code. A flaky test that produces wrong verdicts → **Test Quality**.
 
-## Output structure — identical for all three files
+## Output structure — identical for all six files
 
 Each file uses **exactly** the following headings and order. The filename and the H1 title differ; everything else is the same shape.
 
@@ -223,13 +223,13 @@ bullets in the intro.>
 - **Goal** — max **5** bullets. Each bullet is one short sentence describing a desired end-state for this attribute across the portfolio (e.g. "Every public endpoint enforces a documented rate limit"). Goals are outcomes, not tasks.
 - **Risk if you do nothing** — max **5** bullets. Each bullet is one short sentence naming a concrete consequence (e.g. "Cosmos RU spikes under provisioning load will throw 429s onto the user path"). Avoid vague risks like "tech debt grows".
 - **Actions / Introduction** — ≤ **100 words**, single paragraph, no bullets, no headings inside it. Set the strategic frame: where to start, what to sequence behind what, what success looks like.
-- **Actions / Top 6** — **exactly 6** numbered actions (fewer only if you genuinely cannot find six attribute-relevant findings — never pad). Each action is **one sentence**, ends with a citation, names a concrete artifact where possible (a file, a NuGet, a .NET feature, a shared component from `Summary §C<n>`).
+- **Actions / Top 6** — up to **6** numbered actions, ordered highest-impact first. Emit only actions backed by a real finding in the source summaries — **never pad to six**. The source summaries are produced under a value bar that excludes cosmetic items, so a clean portfolio legitimately yields few or zero actions; if there are none for this attribute, write the single line `_No material actions — this attribute is sound across the portfolio._` instead of inventing work. Each action is **one sentence**, ends with a citation, names a concrete artifact where possible (a file, a NuGet, a .NET feature, a shared component from `Summary §C<n>`).
 - **Actions / Future to-dos** — max **6** bullets. Items that are real but not in the top 6 (lower ROI, blocked by something else, or smaller in scope). One sentence each. If none, write the `_None at this time._` line.
 
 ## Process — follow in order
 
 1. **Read** all four `CQ-*-Summary.md` files into memory.
-2. **Extract** every theme/row that could plausibly belong to one of the three attributes:
+2. **Extract** every theme/row that could plausibly belong to one of the six attributes:
    - From `Summary`: `### X<n>` themes; rows in `## Scalability issues — diagnosis & fix`; rows in `## Code & architecture smells — diagnosis & fix`; `### C<n>` consolidation opportunities.
    - From `Architecture-Summary`: `### AR<n>` themes.
    - From `CodeReview-Summary`: `### CR<n>` themes.
@@ -257,7 +257,7 @@ Walk the file once and confirm:
 3. **Goal**: ≥1 and ≤5 bullets, each one short sentence, all outcome-shaped.
 4. **Risk if you do nothing**: ≥1 and ≤5 bullets, each names a concrete consequence.
 5. **Actions / Introduction**: one paragraph, ≤100 words, no bullets.
-6. **Top 6 actions**: numbered 1–6, every item ends with a valid citation in short-name form (drop `CQ-` and `.md`).
+6. **Top 6 actions**: up to six items, numbered from 1, each ending with a valid citation in short-name form (drop `CQ-` and `.md`) — or the single line `_No material actions — this attribute is sound across the portfolio._` if there are none. Never padded to six.
 7. **Future to-dos**: either ≤6 bullets, or the literal line `_None at this time._`.
 8. Every citation tag exists in the corresponding source file (re-grep the section header in memory — drop the row if it doesn't).
 9. No item appears in two of the six output files (a finding belongs to exactly one bucket). In particular, no test-code finding leaks into the five production-code briefs — every action's evidence chain must terminate in a summary or per-solution citation.
