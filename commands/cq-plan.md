@@ -1,11 +1,11 @@
 ---
-description: Clear CQ-Reviews, run /cq-scan, run /cq-summary, then produce DETAILED + SUMMARY implementation plans per CQ kind (Architecture, CodeReview, Data, TestReview) for user review before any code changes.
+description: Clear CQ-Reviews, run /cq-scan, run /cq-summary, then produce DETAILED + SUMMARY implementation plans per CQ kind (Architecture, Frontend, CodeReview, Data, TestReview) for user review before any code changes.
 argument-hint: [subdir1 subdir2 ...]
 ---
 
-# /cq-plan — full CQ review → eight implementation plans pipeline
+# /cq-plan — full CQ review → ten implementation plans pipeline
 
-End-to-end orchestrator: wipe prior CQ reports, run a fresh scan, run cross-solution summary, then synthesize **two sets of four reviewable implementation plans** (one per CQ kind, one set derived from per-project reports and one set derived from the cross-solution summary).
+End-to-end orchestrator: wipe prior CQ reports, run a fresh scan, run cross-solution summary, then synthesize **two sets of five reviewable implementation plans** (one per CQ kind, one set derived from per-project reports and one set derived from the cross-solution summary).
 
 ## Arguments
 
@@ -46,33 +46,36 @@ The downstream CQ agents (CQ-Architect, CQ-Reviewer, CQ-Data, CQ-Test-Reviewer) 
 
 ### 4. Run /cq-summary
 
-- Dispatch a `CQ-Summary` agent via the `Agent` tool. All summary files land in `CQ-Reviews/summaries/`. Brief it to produce **all four** per-domain summaries plus the top-level cross-domain summary, **using the file naming `CQ-Summary-<Domain>.md` and `CQ-Summary.md`** (NOT the agent's default `CQ-<Domain>-Summary.md` — be explicit, the agent honours an explicit override):
+- Dispatch a `CQ-Summary` agent via the `Agent` tool. All summary files land in `CQ-Reviews/summaries/`. Brief it to produce **all five** per-domain summaries plus the top-level cross-domain summary, **using the file naming `CQ-Summary-<Domain>.md` and `CQ-Summary.md`** (NOT the agent's default `CQ-<Domain>-Summary.md` — be explicit, the agent honours an explicit override):
   - `summaries/CQ-Summary-Architecture.md` (from `solutions/*/Architect.md`)
+  - `summaries/CQ-Summary-Frontend.md` (from `solutions/*/Frontend.md`)
   - `summaries/CQ-Summary-CodeReview.md` (from `projects/*/CodeReview.md`)
   - `summaries/CQ-Summary-Data.md` (from `projects/*/Data.md` — produce even when only one project has findings; the others are 0-finding attestations)
   - `summaries/CQ-Summary-TestReview.md` (from `projects/*/TestReview.md`)
-  - `summaries/CQ-Summary.md` (top-level cross-domain summary consuming all four)
+  - `summaries/CQ-Summary.md` (top-level cross-domain summary consuming all five)
 - Do NOT proceed to Step 5 until the agent returns.
 
 ### 5. Read the per-project reports AND the summaries
 
 After scan + summary finish:
 
-- Use `Glob` with `CQ-Reviews/solutions/*/Architect.md`, `CQ-Reviews/projects/*/CodeReview.md`, `CQ-Reviews/projects/*/Data.md`, `CQ-Reviews/projects/*/TestReview.md` to enumerate every per-unit report.
-- Also enumerate the four `CQ-Reviews/summaries/CQ-Summary-<Domain>.md` files written in Step 4.
+- Use `Glob` with `CQ-Reviews/solutions/*/Architect.md`, `CQ-Reviews/solutions/*/Frontend.md`, `CQ-Reviews/projects/*/CodeReview.md`, `CQ-Reviews/projects/*/Data.md`, `CQ-Reviews/projects/*/TestReview.md` to enumerate every per-unit report.
+- Also enumerate the five `CQ-Reviews/summaries/CQ-Summary-<Domain>.md` files written in Step 4 (`CQ-Summary-Architecture.md`, `CQ-Summary-Frontend.md`, `CQ-Summary-CodeReview.md`, `CQ-Summary-Data.md`, `CQ-Summary-TestReview.md`).
 - Read each per-unit report and each summary. For each kind keep two structured tallies:
   - **DETAILED tally** (per-unit): one entry per finding `{ unit, severity, category, summary, suggested_fix, source_report_path, source_section }`. Group by category so the plan addresses themes rather than individual lines.
   - **SUMMARY tally** (cross-solution): one entry per promoted theme `{ theme_id (e.g. AR3), affected_solutions, severity, category, evidence_links }` — exactly the structure the summary already uses.
 
-### 6. Create eight implementation plans (4 DETAILED + 4 SUMMARY)
+### 6. Create ten implementation plans (5 DETAILED + 5 SUMMARY)
 
-Use the `superpowers:writing-plans` skill style. Write the plans directly with the `Write` tool — do NOT spawn sub-agents for this. The eight files live at:
+Use the `superpowers:writing-plans` skill style. Write the plans directly with the `Write` tool — do NOT spawn sub-agents for this. The ten files live at:
 
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-DETAILED-Architecture.md` (from `solutions/*/Architect.md` reports)
+- `CQ-Reviews/plans/IMPLEMENTATION-PLAN-DETAILED-Frontend.md` (from `solutions/*/Frontend.md` reports)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-DETAILED-CodeReview.md` (from `projects/*/CodeReview.md` reports)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-DETAILED-Data.md` (from `projects/*/Data.md` reports)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-DETAILED-TestReview.md` (from `projects/*/TestReview.md` reports)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-SUMMARY-Architecture.md` (from `summaries/CQ-Summary-Architecture.md`)
+- `CQ-Reviews/plans/IMPLEMENTATION-PLAN-SUMMARY-Frontend.md` (from `summaries/CQ-Summary-Frontend.md`)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-SUMMARY-CodeReview.md` (from `summaries/CQ-Summary-CodeReview.md`)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-SUMMARY-Data.md` (from `summaries/CQ-Summary-Data.md`)
 - `CQ-Reviews/plans/IMPLEMENTATION-PLAN-SUMMARY-TestReview.md` (from `summaries/CQ-Summary-TestReview.md`)
@@ -116,7 +119,7 @@ Several themes overlap across plans (e.g. `TimeProvider` injection appears in Co
 
 #### 6d. Project-rule honour
 
-Honour every project rule in `CLAUDE.md` across all eight plans:
+Honour every project rule in `CLAUDE.md` across all ten plans:
 
 - **Coverage ratchet:** no untested production change. Each refactor task lists its companion test work.
 - **Skills:** `clean-csharp`, `unit-testing`, `aspnet-minimal-api`, `services-and-di`, `wpf-command-dialog`, `devexpress-*` skills are referenced in tasks that touch the relevant areas.
@@ -125,7 +128,7 @@ Honour every project rule in `CLAUDE.md` across all eight plans:
 ### 7. Hand off for review
 
 - Do NOT begin implementation. Print a concise summary to the user:
-  - The eight plan paths grouped by kind.
+  - The ten plan paths grouped by kind (Architecture, Frontend, CodeReview, Data, TestReview).
   - For each kind, the finding count, theme count, and task counts in DETAILED vs SUMMARY.
   - Top 3 findings across the whole portfolio by severity (cite the source report).
   - Recommendation: read the SUMMARY plans first to align on direction, then drill into DETAILED plans for execution.
@@ -139,10 +142,10 @@ Honour every project rule in `CLAUDE.md` across all eight plans:
   - the purpose files produced by `CQ-Business-Value` agents in Step 2,
   - the report files produced by `/cq-scan` agents in Step 3,
   - the summary files produced by `/cq-summary` in Step 4,
-  - the eight plan files in Step 6.
+  - the ten plan files in Step 6.
   No production source files may be modified.
 - Do not invoke `CQ-HTML-Publisher` or `CQ-Management-Summary` here — those are separate workflows. `CQ-Business-Value` IS invoked in Step 2, but only for solutions whose `solutions/<Solution>/Purpose.md` file is missing.
-- If `/cq-scan` produces zero reports of a given kind, write a one-paragraph placeholder plan for both that kind's DETAILED and SUMMARY files explaining "no findings — nothing to plan" rather than skipping the file (downstream tooling expects all eight paths to exist). The same applies when reports exist but contain zero findings — a legitimate result under the reviewers' value bar: the plan for that kind is a short "reviewed clean — nothing to plan" note, not a padded list. Do NOT treat an empty `## Recommended Actions` or empty `## Findings` section as an error, and do NOT pull items from a report's `## Optional / stylistic (below the value bar)` section into a plan — those failed the value bar by design.
+- If `/cq-scan` produces zero reports of a given kind, write a one-paragraph placeholder plan for both that kind's DETAILED and SUMMARY files explaining "no findings — nothing to plan" rather than skipping the file (downstream tooling expects all ten paths to exist). The same applies when reports exist but contain zero findings — a legitimate result under the reviewers' value bar: the plan for that kind is a short "reviewed clean — nothing to plan" note, not a padded list. Do NOT treat an empty `## Recommended Actions` or empty `## Findings` section as an error, and do NOT pull items from a report's `## Optional / stylistic (below the value bar)` section into a plan — those failed the value bar by design.
 - If `/cq-summary` fails to produce a per-domain summary file, do NOT generate the corresponding SUMMARY plan — surface the error and stop.
 - The plans are proposals: every task in them must be reversible until the user approves execution.
 - Match the agent's actual summary filename. The current `CQ-Summary` agent default is `CQ-<Domain>-Summary.md`; this command **overrides** that to `CQ-Summary-<Domain>.md` (written under `CQ-Reviews/summaries/`) via an explicit instruction in the Step 4 prompt. Verify the files on disk match before proceeding to Step 6.
