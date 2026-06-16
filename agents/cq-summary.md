@@ -40,12 +40,12 @@ This rule overrides any default sub-agent behaviour to "return results inline." 
 
 The working directory is `<working-directory>`. Every **filesystem path** that appears in a report body — codebase citations, recommended-fix targets, screenshots, etc. — MUST be written **relative to that working directory**, with the leading `<working-directory>\` stripped.
 
-- ✅ `DES-Provisioning\WebAPI\…\Foo.cs:42`
-- ❌ `<working-directory>\DES-Provisioning\WebAPI\…\Foo.cs:42`
+- ✅ `Onboarding\WebAPI\…\Foo.cs:42`
+- ❌ `<working-directory>\Onboarding\WebAPI\…\Foo.cs:42`
 
 The ONLY absolute paths you may emit are the five in your final orchestrator confirmation (the paths of the report files you just wrote). Everything *inside* the reports is relative.
 
-**Citations of other reports are NOT paths** — they use the short-name form defined under §Reference nomenclature below (e.g. `` `ProvisioningApi-Architect §Findings #5` ``). Do not write report citations as `CQ-Reviews\solutions\ProvisioningApi\Architect.md`; that's a filesystem path, not a citation.
+**Citations of other reports are NOT paths** — they use the short-name form defined under §Reference nomenclature below (e.g. `` `OnboardingApi-Architect §Findings #5` ``). Do not write report citations as `CQ-Reviews\solutions\OnboardingApi\Architect.md`; that's a filesystem path, not a citation.
 
 ## Reference nomenclature
 
@@ -80,20 +80,20 @@ Citations refer to other reports by a **short name**, never the full filename or
 | `projects\<Proj>\TestReview.md`       | `<Proj>-TestReview`             |
 | `solutions\<Sln>\Purpose.md`          | `<Sln>-Purpose`                 |
 
-**Citation form:** `` `<short-name> §<tag>` `` — e.g. `` `Architecture-Summary §AR2` `` or `` `ProvisioningApi-Architect §Findings #5` ``. Within the same file, `` `§<tag>` `` alone is sufficient. Across files (only legal inside `Summary`), the short name is required.
+**Citation form:** `` `<short-name> §<tag>` `` — e.g. `` `Architecture-Summary §AR2` `` or `` `OnboardingApi-Architect §Findings #5` ``. Within the same file, `` `§<tag>` `` alone is sufficient. Across files (only legal inside `Summary`), the short name is required.
 
 **Underlying per-solution findings keep their `§Findings #N` form** — those are not themes, and re-coding them would collide with the domain letters. Chained citations look like:
 
 ```
-Architecture-Summary §AR2 → ProvisioningApi-Architect §Findings #5
+Architecture-Summary §AR2 → OnboardingApi-Architect §Findings #5
 ```
 
 **Anti-examples — do NOT emit:**
 
-- ❌ `` `solutions\ProvisioningApi\Architect.md §Findings #5` `` — that's a path; cite `` `ProvisioningApi-Architect §Findings #5` ``.
+- ❌ `` `solutions\OnboardingApi\Architect.md §Findings #5` `` — that's a path; cite `` `OnboardingApi-Architect §Findings #5` ``.
 - ❌ `` `CQ-Architecture-Summary.md §AR2` `` — drop `CQ-` and `.md`: `` `Architecture-Summary §AR2` ``.
-- ❌ `` `ProvisioningApi-Architect.md §Findings #5` `` — drop the `.md` suffix.
-- ❌ `` `ProvisioningApi-Architect §Findings` `` — section must be specific. Always cite the numbered finding (`§Findings #5`), never a bare `§Findings`. A citation without a target is not a citation.
+- ❌ `` `OnboardingApi-Architect.md §Findings #5` `` — drop the `.md` suffix.
+- ❌ `` `OnboardingApi-Architect §Findings` `` — section must be specific. Always cite the numbered finding (`§Findings #5`), never a bare `§Findings`. A citation without a target is not a citation.
 
 **Legend block to embed in every summary file (verbatim):**
 
@@ -108,7 +108,7 @@ Themes in this report are tagged `<DD><n>`:
 - `X<n>`  = cross-cutting theme in Summary
 - `C<n>`  = consolidation opportunity in Summary
 
-Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\ProvisioningApi\Architect.md` → `ProvisioningApi-Architect`; `projects\ProvisioningApi.WebApi\CodeReview.md` → `ProvisioningApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
+Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\OnboardingApi\Architect.md` → `OnboardingApi-Architect`; `projects\OnboardingApi.WebApi\CodeReview.md` → `OnboardingApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `OnboardingApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
 ```
 
 Place the legend block as the **second** H2 in each summary file, immediately after `## Inputs`.
@@ -205,7 +205,7 @@ Scan the clusters across all four domain summaries for duplicated functionality 
 
 For each candidate:
 
-- Name a concrete shared component (`Tke.Bbx.Des.Common.<X>` or similar — match the existing namespace style).
+- Name a concrete shared component (`Acme.Research.Platform.Common.<X>` or similar — match the existing namespace style).
 - List which solutions duplicate the code today (cite source-report sections or codebase paths).
 - Sketch the consumption model (NuGet package, shared project, source generator).
 - Estimate effort (S / M / L).
@@ -354,7 +354,7 @@ If you can't fit the title at ≤60 chars, the theme is probably two themes — 
 ### C1 — <Candidate shared component>
 **Description:** <2–4 sentences naming what the shared component is, the namespace, the .NET features it bundles (e.g. `EnableRetryOnFailure`, `AddRateLimiter`, `IDistributedCache`), and what consumer code stops repeating>
 **Today (duplicated in):** <Sln1 — `path/to/foo`>, <Sln2 — `path/to/foo`>
-**Proposed shape:** <NuGet / shared project / source generator>; namespace `<Tke.Bbx.Des.Common.X>`
+**Proposed shape:** <NuGet / shared project / source generator>; namespace `<Acme.Research.Platform.Common.X>`
 **Migration sketch:**
 - <bullet>
 - <bullet>
@@ -366,10 +366,10 @@ If you can't fit the title at ≤60 chars, the theme is probably two themes — 
 
 Examples:
 
-- ❌ `### C5 — Tke.Bbx.Des.Common.Data: shared AddDesDbContext<TContext> with EnableRetryOnFailure + CommandTimeout + NoTracking`
-- ✅ `### C5 — Shared DbContext registration extension` — **Description:** "Bundles a reusable `AddDesDbContext<TContext>` extension under the `Tke.Bbx.Des.Common.Data` namespace, applying `EnableRetryOnFailure`, a sane `CommandTimeout`, and `QueryTrackingBehavior.NoTracking` so every host stops re-deriving the same config."
-- ❌ `### C2 — Tke.Bbx.Des.Common.Resilience: shared Polly + Redis correlation primitives`
-- ✅ `### C2 — Shared resilience primitives` — **Description:** "Polly retry / circuit-breaker / timeout policies plus the Redis-backed correlation-id propagation, packaged under `Tke.Bbx.Des.Common.Resilience` so the four hosts stop hand-rolling their own."
+- ❌ `### C5 — Acme.Research.Platform.Common.Data: shared AddPlatformDbContext<TContext> with EnableRetryOnFailure + CommandTimeout + NoTracking`
+- ✅ `### C5 — Shared DbContext registration extension` — **Description:** "Bundles a reusable `AddPlatformDbContext<TContext>` extension under the `Acme.Research.Platform.Common.Data` namespace, applying `EnableRetryOnFailure`, a sane `CommandTimeout`, and `QueryTrackingBehavior.NoTracking` so every host stops re-deriving the same config."
+- ❌ `### C2 — Acme.Research.Platform.Common.Resilience: shared Polly + Redis correlation primitives`
+- ✅ `### C2 — Shared resilience primitives` — **Description:** "Polly retry / circuit-breaker / timeout policies plus the Redis-backed correlation-id propagation, packaged under `Acme.Research.Platform.Common.Resilience` so the four hosts stop hand-rolling their own."
 
 **`## Per-solution gaps`** — single table:
 
@@ -420,7 +420,7 @@ After every build run the script prints any unresolved citations under `Unresolv
 
 - Invented sub-numbers: `#4-sub`, `#4a`, `#4.1`. If a sub-issue deserves its own anchor it must be promoted to its own numbered finding in the source per-solution report — not papered over with a suffix in your summary citation.
 - Parenthetical aside-codes: `(C2)`, `(see X3)`, `(see above)`, `(see below)`. Use a backtick citation or nothing — the parenthetical form does not resolve to a hyperlink.
-- Backticked references to a Purpose file in any form. Neither the bare ``` `<Sln>-Purpose` ``` nor a free-text section form (`§Severity-calibration`, `§Solution-profile`, …) resolves — Purpose files have no per-finding numbering, no summary-code anchors, and the build does not emit a file-level anchor for Purpose. When you need to point at a Purpose report from prose, write it without backticks (e.g. "the severity-calibration guidance in the CheckUpdateApi Purpose report") and reserve backticks for citations the build can resolve (`§Findings #N` and `§<Code>` forms only).
+- Backticked references to a Purpose file in any form. Neither the bare ``` `<Sln>-Purpose` ``` nor a free-text section form (`§Severity-calibration`, `§Solution-profile`, …) resolves — Purpose files have no per-finding numbering, no summary-code anchors, and the build does not emit a file-level anchor for Purpose. When you need to point at a Purpose report from prose, write it without backticks (e.g. "the severity-calibration guidance in the CatalogApi Purpose report") and reserve backticks for citations the build can resolve (`§Findings #N` and `§<Code>` forms only).
 - Bare `§Findings` with no number. Every `§Findings` MUST include `#N`.
 
 ### Table-cell discipline
@@ -442,7 +442,7 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 ## Rules
 
 - Every table row MUST cite at least one source-report section (or — in `Summary` — at least one domain-summary section) or a codebase symbol you verified (file path + line). No uncited rows.
-- Citations MUST use the short report form (folder name + lens basename for per-unit reports; drop `CQ-` and `.md` for summaries). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``. See §Reference nomenclature for the full mapping.
+- Citations MUST use the short report form (folder name + lens basename for per-unit reports; drop `CQ-` and `.md` for summaries). `` `OnboardingApi-Architect §Findings #5` ``, not `` `OnboardingApi-CQ-Architect.md §Findings #5` ``. See §Reference nomenclature for the full mapping.
 - Every `§Findings` citation MUST be specific: include the finding number (`§Findings #5`). A bare `§Findings` is a broken reference — verify and number it, or drop the row.
 - Every "Recommended fix" must be specific and feasible — name file paths, shared component names, or .NET features (`AddRateLimiter`, `IDistributedCache`, `ProblemDetails`, etc.) where applicable. "Improve scalability" is not a fix.
 - Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days. Use the same scale across all five files.

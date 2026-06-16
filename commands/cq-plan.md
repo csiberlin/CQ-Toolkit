@@ -27,8 +27,8 @@ The downstream CQ agents (CQ-Architect, CQ-Reviewer, CQ-Data, CQ-Test-Reviewer) 
 - Discover the set of solution files exactly as `/cq-scan` does: `Glob` with patterns `**/*.sln` **and** `**/*.slnx` over each subdirectory in `$ARGUMENTS` (or from cwd when no args). Both the classic `.sln` and the new XML `.slnx` formats are supported. Exclude solution files under `.vs/`, `.git/`, `bin/`, `obj/`, `node_modules/`, and `.claude/worktrees/` (caches and isolated copies, not the canonical solution). If a folder has both a `.sln` and a `.slnx` for the same solution, treat them as one (prefer the `.slnx`).
 - For each solution file, compute the expected purpose file path:
   - `<Solution-Name>` = LAST dot-separated segment of the solution file name, with the `.sln` / `.slnx` extension stripped.
-    - `Tke.Bbx.Des.CommunicationApi.sln` → `solutions/CommunicationApi/Purpose.md`
-    - `GxReport.slnx` → `solutions/GxReport/Purpose.md`
+    - `Acme.Research.Platform.MessagingApi.sln` → `solutions/MessagingApi/Purpose.md`
+    - `ReportTool.slnx` → `solutions/ReportTool/Purpose.md`
     - `Foo.sln` → `solutions/Foo/Purpose.md`
   - Expected path: `CQ-Reviews/solutions/<Solution-Name>/Purpose.md`
 - For every solution file (`.sln` / `.slnx`) whose expected purpose file is **missing**, dispatch a `CQ-Business-Value` agent (single message, multiple parallel `Agent` calls — batch in groups of 6–10 if there are many).

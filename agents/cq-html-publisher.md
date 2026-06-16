@@ -62,8 +62,8 @@ The build script rewrites backticked **short-name citations** in the source mark
 
 - `` `Architecture-Summary §AR2` `` → `CQ-Architecture-Summary.html#ar2` (and `CodeReview-Summary` / `TestReview-Summary` likewise)
 - `` `Summary §X1` `` → `index.html#x1`
-- `` `ProvisioningApi-Architect §Findings #3` `` → `solutions/ProvisioningApi/Architect.html#findings-3`
-- `` `DES.CheckUpdate.WebApi-CodeReview §Findings #2` `` → `projects/DES.CheckUpdate.WebApi/CodeReview.html#findings-2` (and `-Data` / `-TestReview` likewise)
+- `` `OnboardingApi-Architect §Findings #3` `` → `solutions/OnboardingApi/Architect.html#findings-3`
+- `` `CatalogApi.WebApi-CodeReview §Findings #2` `` → `projects/CatalogApi.WebApi/CodeReview.html#findings-2` (and `-Data` / `-TestReview` likewise)
 - Bare `<short-name>` without a section → links to the corresponding page root.
 
 **Short-name → page resolution.** Split the short name on the final `-` into `<name>` and `<lens>`. A `-Architect` lens routes to `solutions/<name>/Architect.html`; `-CodeReview` / `-Data` / `-TestReview` route to `projects/<name>/<Lens>.html`; `*-Summary` and the bare `Summary` route to the top-level summary pages. (`-Purpose` short names are never emitted as resolvable citations and need no link.)

@@ -79,8 +79,8 @@ Per-`.csproj` reviewer agents (`CQ-Data`, `CQ-Reviewer`, `CQ-Test-Reviewer`) are
 
 The citation scheme is coupled to the flat filename and must change — but only the **derivation rule**, not the surface form.
 
-- **Short-name derivation changes from filename-split to folder+basename.** Today: glob `CQ-Reviews/*.md`, split on `-CQ-` to get `{Solution, ReportType}`, and drop the `CQ-` prefix / `.md` suffix the files carry. New: the short name is `<folder>-<basename-without-.md>` — e.g. `solutions/DES-CheckUpdate/Architect.md` → `DES-CheckUpdate-Architect`; `projects/DES.CheckUpdate.WebApi/CodeReview.md` → `DES.CheckUpdate.WebApi-CodeReview`.
-- **The in-prose citation surface form is unchanged.** `` `DES-CheckUpdate-Architect §Findings #5` `` and `` `Architecture-Summary §AR2` `` look exactly as before, so existing examples in the agent prose do not need rewording.
+- **Short-name derivation changes from filename-split to folder+basename.** Today: glob `CQ-Reviews/*.md`, split on `-CQ-` to get `{Solution, ReportType}`, and drop the `CQ-` prefix / `.md` suffix the files carry. New: the short name is `<folder>-<basename-without-.md>` — e.g. `solutions/Catalog/Architect.md` → `Catalog-Architect`; `projects/CatalogApi.WebApi/CodeReview.md` → `CatalogApi.WebApi-CodeReview`.
+- **The in-prose citation surface form is unchanged.** `` `Catalog-Architect §Findings #5` `` and `` `Architecture-Summary §AR2` `` look exactly as before, so existing examples in the agent prose do not need rewording.
 - **Remove the "files carry `CQ-` prefix and `.md` on disk" wording.** Per-tier report files no longer carry `CQ-`. The "drop `CQ-`" instruction in the nomenclature blocks is replaced by the folder+basename rule. Summary files keep their `CQ-Summary-<Lens>.md` names (their short name `<Lens>-Summary` / `Architecture-Summary` is unaffected — confirm the mapping is stated explicitly).
 - **`cq-summary` enumeration step** (currently "Glob `CQ-Reviews/*.md` and split on `-CQ-`") becomes: glob `CQ-Reviews/solutions/*/*.md` and `CQ-Reviews/projects/*/*.md`; derive `{unit, lens}` from folder + basename.
 - **`§Findings #N` and `§<Code>` anchors are unaffected.**
@@ -91,7 +91,7 @@ The citation scheme is coupled to the flat filename and must change — but only
 
 - **Input** is now the two nested tiers (`solutions/*/*.md`, `projects/*/*.md`) instead of flat files. The flat→nested translation the script does today is removed (input is already nested).
 - **Output tree** mirrors the tiers: top-level `index.html` from `CQ-Summary.md`; a per-solution page (`Purpose` + `Architecture`, with links down to that solution's project reports); per-project pages for the per-code lenses.
-- **Cross-reference linkification** map reparses the new short names → new page paths (`DES-CheckUpdate-Architect §Findings #3` → `solutions/DES-CheckUpdate/Architect.html#findings-3`; `DES.CheckUpdate.WebApi-CodeReview §Findings #2` → `projects/DES.CheckUpdate.WebApi/CodeReview.html#findings-2`).
+- **Cross-reference linkification** map reparses the new short names → new page paths (`Catalog-Architect §Findings #3` → `solutions/Catalog/Architect.html#findings-3`; `CatalogApi.WebApi-CodeReview §Findings #2` → `projects/CatalogApi.WebApi/CodeReview.html#findings-2`).
 - **Solution→project linkage:** the per-solution `index.html` lists and links the project reports belonging to that solution. The solution→project mapping comes from `.sln` enumeration at scan time; the publisher reads it from the directory layout plus (if needed) a small manifest written by `/cq-scan`.
 
 ## Wipe-but-preserve logic

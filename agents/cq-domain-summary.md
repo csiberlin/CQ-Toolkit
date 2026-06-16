@@ -42,8 +42,8 @@ If you cannot write the file, say so explicitly and stop. Do not return the repo
 
 The working directory is `<working-directory>`. Every **filesystem path** in the report body — codebase citations, recommended-fix targets — MUST be written relative to that directory.
 
-- ✅ `DES-Provisioning\WebAPI\…\Foo.cs:42`
-- ❌ `<working-directory>\DES-Provisioning\WebAPI\…\Foo.cs:42`
+- ✅ `Onboarding\WebAPI\…\Foo.cs:42`
+- ❌ `<working-directory>\Onboarding\WebAPI\…\Foo.cs:42`
 
 Citations of other reports are NOT paths — they use the short-name form (see Reference nomenclature below).
 
@@ -88,7 +88,7 @@ To avoid N×Read churn, read every input file **once** at the start of Step 3, h
 For each source report, walk its `## Findings` section and capture each finding into a working list. Each entry:
 
 - Solution
-- Source report + section (e.g. `ProvisioningApi-Architect §Findings #3`)
+- Source report + section (e.g. `OnboardingApi-Architect §Findings #3`)
 - Category (as labelled in the source)
 - Severity (as labelled in the source)
 - The file/line citation, if any
@@ -170,7 +170,7 @@ Themes in this report are tagged `<DD><n>`:
 - `CR<n>` = CodeReview summary theme
 - `TR<n>` = TestReview summary theme
 
-Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\ProvisioningApi\Architect.md` → `ProvisioningApi-Architect`; `projects\ProvisioningApi.WebApi\CodeReview.md` → `ProvisioningApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `ProvisioningApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
+Citations use the short report name — the report's folder joined to its lens basename, with no `CQ-` infix and no `.md` (e.g. `solutions\OnboardingApi\Architect.md` → `OnboardingApi-Architect`; `projects\OnboardingApi.WebApi\CodeReview.md` → `OnboardingApi.WebApi-CodeReview`). Summary files keep their `<Lens>-Summary` short name. Examples: `Architecture-Summary §AR2`; `OnboardingApi-Architect §Findings #5`. Within the same file, `§<tag>` alone is sufficient.
 ```
 
 ### `## Inputs` — single table
@@ -205,7 +205,7 @@ Examples:
 - ❌ `### CR2 — Sync-over-async on hot/hot-adjacent paths (code-level expression of AR2)`
 - ✅ `### CR2 — Sync-over-async on hot paths` — opens **Summary:** with "Code-level expression of `Architecture-Summary §AR2`; per-site `.Result` / `.Wait()` calls in …".
 - ❌ `### TR5 — Massive Arrange-block duplication; per-test SUT reconstruction; embedded JSON literals`
-- ✅ `### TR5 — Arrange-block duplication across the suite` — opens **Summary:** with "Three failure modes share a root: per-test SUT reconstruction × 10 in CheckUpdateApi, 18-line scaffold × 6 in CommunicationApi, embedded JSON literals in ProvisioningApi tests …".
+- ✅ `### TR5 — Arrange-block duplication across the suite` — opens **Summary:** with "Three failure modes share a root: per-test SUT reconstruction × 10 in CatalogApi, 18-line scaffold × 6 in MessagingApi, embedded JSON literals in OnboardingApi tests …".
 
 If you can't carry the title at ≤60 chars, the body of the theme isn't a single coherent thing — split into two themes or move the qualifier into the `**Summary:**`.
 
@@ -260,7 +260,7 @@ If any check fails, fix the file before writing.
 ## Rules
 
 - Every table row MUST cite at least one source-report section or a codebase symbol you verified (file path + line). No uncited rows.
-- Citations MUST use the short report form (folder name + lens basename, no `CQ-` infix, no `.md`). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``.
+- Citations MUST use the short report form (folder name + lens basename, no `CQ-` infix, no `.md`). `` `OnboardingApi-Architect §Findings #5` ``, not `` `OnboardingApi-CQ-Architect.md §Findings #5` ``.
 - Every `§Findings` citation MUST include the finding number (`§Findings #5`). A bare `§Findings` is broken — number it or drop the row.
 - Every "Recommended fix" must be specific and feasible — name file paths, shared component names, or .NET features (`AddRateLimiter`, `IDistributedCache`, `ProblemDetails`) where applicable. "Improve scalability" is not a fix.
 - Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days.

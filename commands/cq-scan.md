@@ -62,7 +62,7 @@ For each **test** project, spawn ONE agent:
 - `subagent_type: "CQ-Test-Reviewer"` — test-quality review.
 
 Each `Agent` prompt MUST tell the agent that the **working directory** is the current shell working directory (the agents resolve the `<working-directory>` placeholder to it), plus:
-- **CQ-Architect** — the absolute path of the solution file (`.sln` or `.slnx`) and its `<Solution-Name>` (last dot-separated segment of the solution file name, with the `.sln` / `.slnx` extension stripped — e.g. `GxReport.slnx` → `GxReport`, `Tke.Bbx.Des.CommunicationApi.sln` → `CommunicationApi`). It writes `<cwd>\CQ-Reviews\solutions\<Solution-Name>\Architect.md`.
+- **CQ-Architect** — the absolute path of the solution file (`.sln` or `.slnx`) and its `<Solution-Name>` (last dot-separated segment of the solution file name, with the `.sln` / `.slnx` extension stripped — e.g. `ReportTool.slnx` → `ReportTool`, `Acme.Research.Platform.MessagingApi.sln` → `MessagingApi`). It writes `<cwd>\CQ-Reviews\solutions\<Solution-Name>\Architect.md`.
 - **CQ-Reviewer / CQ-Data / CQ-Test-Reviewer** — the absolute path of the target `.csproj`, its `<Project-Name>` (`.csproj` filename without extension), and the `<Solution-Name>` of the owning solution (used for the Purpose lookup and severity calibration). They write `<cwd>\CQ-Reviews\projects\<Project-Name>\<Lens>.md` (`<Lens>` ∈ `CodeReview` / `Data` / `TestReview`).
 
 Be mindful of parallelism: if there are many units, batch the `Agent` calls in groups of 6–10 per message rather than firing hundreds at once.
