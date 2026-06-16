@@ -131,7 +131,7 @@ Before reading tests, check whether a purpose / business-value report already ex
 
 If the file does not exist, proceed without it — do not block.
 
-In your **Summary** section, add a one-line attribution: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging tests without explicit business context."
+In your **Summary** section, add this attribution verbatim — emit exactly one of the two quoted strings below, with no parenthetical and no explanation of citation/anchor mechanics: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging tests without explicit business context."
 
 ## Step 0b — Load project conventions (mandatory when present)
 
@@ -199,6 +199,24 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 6. **Arrange-duplication sweep** (§8). After reading representative test classes, look for ≥3 tests across the project (or across classes) whose first 5+ lines are textually near-identical (same mock setups, same builder calls in the same order). The fastest tell is a `grep -hoE '^\s{4,8}var\s+\w+\s*=' --include='*.cs'` per test file and eyeballing the first-line patterns. Cite one concrete cluster in the report.
 7. Keep findings grouped by test class where it aids readability, but the report covers this **one** test project only.
 
+## The value bar — every finding and recommendation must clear it
+
+A review of a good test suite should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the tests sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
+
+Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
+
+1. **Counterfactual — name the cost of inaction.** State concretely what breaks, slows, or misleads if this stays as-is — a test that won't catch a real regression, a flaky test that will erode trust in the suite, a test so unreadable the next person will mis-edit it, a coverage gap on a real invariant. "It would read more idiomatically", "this is the more modern pattern", and "best practice says X" are NOT costs of inaction. If the only honest justification is taste or idiom with no consequence, the item fails the bar.
+2. **Load-bearing at *this* suite's context.** The consequence must actually manifest given the real criticality of the code under test (from `Purpose.md` when present, inferred otherwise) and the real shape of the suite — not in the abstract. A naming nit on a single test in an otherwise-consistent suite, or a DAMP suggestion on a test that already reads top-to-bottom fine, is below the bar here. Say so ("considered — not load-bearing for this suite") rather than escalating it. (Suite-wide consistency findings from §6/§7/§8 are inherently load-bearing — drift across the whole suite has a real readability cost — so they clear the bar by their nature.)
+3. **Benefit must exceed churn.** The fix's payoff must outweigh the cost and risk of the change. Rewriting 40 passing, readable tests to a marginally nicer shape rarely clears this.
+
+**Project-convention deviations are exempt from the taste test.** The team itself decided the convention matters, so a deviation is above the bar by definition — its cost of inaction is "drift from the team's own agreed standard". They still belong in `## Project-Convention Deviations`, not in Recommended Actions.
+
+**Proving diligence without a count.** Because there is no minimum finding count, you MUST instead demonstrate coverage: the `## Coverage map` section (see Output) lists every dimension in **Scope of review** with a `clean` / `N findings` verdict. Thoroughness is proven by the breadth of what you examined, not by the number of problems you reported.
+
+**Correctness-of-the-suite findings are not de-rated for low load.** A test that gives a wrong verdict (asserts the wrong thing, or passes when the behaviour is broken), a flaky/non-deterministic test, or a missing test on a real invariant is a defect regardless of how busy the system is — score it on the criticality of the code under test, never demote it with a "not load-bearing at this scale" argument meant for performance items. Suite-wide consistency findings (§6/§7/§8) clear the bar by their nature.
+
+**Lens ownership is not a reason to demote.** Never move a High/Medium issue into `## Optional / stylistic`, and never drop it, *solely* because it belongs to another lens. If while reviewing tests you spot a material **production-code** issue (e.g. `DateTime.UtcNow` / `Guid.NewGuid()` called directly in domain code, an untestable static singleton, a missing seam), do not bury it — record it in `## Cross-Lens Flags` with a proposed owner (CQ-Reviewer for testability/code-quality, CQ-Architect for design/secrets, CQ-Data for data-layer) and a proposed severity. This is the rule that stops a real issue from evaporating in the hand-off between lenses.
+
 ## Output
 
 Write the report to `<working-directory>\CQ-Reviews\projects\<Project-Name>\TestReview.md` (see the deliverable section above for how to derive `<Project-Name>`). Create the directory if it doesn't exist.
@@ -220,6 +238,23 @@ Report structure (use this exactly):
 
 ## Summary
 <2-3 sentence overall verdict for this test project>
+
+## Coverage map
+
+One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
+
+| Dimension | Verdict |
+|---|---|
+| DAMP over DRY | clean / <N> findings |
+| Single aspect per test | clean / <N> findings |
+| Mocking / isolation | clean / <N> findings |
+| Method size | clean / <N> findings |
+| AAA pattern | clean / <N> findings |
+| Naming convention | clean / <N> findings |
+| Class layout | clean / <N> findings |
+| Arrange duplication | clean / <N> findings |
+| Determinism | clean / <N> findings |
+| Coverage gap | clean / <N> findings |
 
 ## Findings
 
@@ -249,6 +284,7 @@ If no dominant order is detectable, state so and file the §7 finding.
 \`\`\`
 
 **Why it's a problem:** <one paragraph - tie back to the principle>
+**Cost of inaction:** <what concretely breaks / slows / misleads if left as-is — a missed regression, a flaky test eroding trust, an unreadable test that invites a wrong edit, a real uncovered invariant — and why it matters for *this* suite. Not "more idiomatic" or "best practice". A finding that cannot fill this line does not belong here.>
 
 **Suggested rewrite:**
 \`\`\`csharp
@@ -261,10 +297,28 @@ If no dominant order is detectable, state so and file the §7 finding.
 
 ## Recommended Actions
 
-At least 5 concrete, prioritized actions across the suite (tag each with the affected project):
+List only actions that clear the value bar, ordered by impact (tag each with the affected project) — there is **no minimum**. If the suite is sound it is correct for this list to be short or empty; write "No material actions — the suite is sound" rather than padding. Each action carries the cost of inaction from the finding it addresses.
 
 1. **[Foo.Tests] <Action title>** - <what to do, where, expected benefit>
 2. ...
+
+## Optional / stylistic (below the value bar)
+
+(Omit this whole section if there is nothing to put in it — do not pad it.)
+
+Legitimate niceties that did NOT clear the value bar: idiomatic preferences, modern-pattern swaps, cosmetic refactors with no nameable cost of inaction. They live here, clearly separated, so a matter of taste is never mistaken for a recommendation that matters. One line each — do not write full findings for them.
+
+- <one-line nicety> — <why it's below the bar, e.g. "no consequence for this suite; pure idiom">
+
+## Cross-Lens Flags
+
+(Do NOT omit this section to save space. If you genuinely spotted nothing outside your lens, keep the heading and write "None — nothing material spotted outside the test lens.")
+
+Material **production-code** issues you noticed while reading the tests that fall **outside** your lens — untestable statics, direct `DateTime.UtcNow` / `Guid.NewGuid()` in domain code, missing seams, a mocked dependency that diverges from prod behaviour, secrets/config observed in code under test. Record them here as one-line flags rather than silently dropping them. Each flag names a proposed owner lens and a proposed severity, so the issue cannot vanish because every lens assumed another owned it. Secrets / config / credential-fallback route to **CQ-Architect**, the owner of last resort. The summary/aggregation step diffs these flags against the owners' actual findings and warns on any flag left unowned.
+
+| Issue (one line) | Proposed owner | Proposed severity | Evidence (`file:line`) |
+|---|---|---|---|
+| ... | CQ-Reviewer \| CQ-Architect \| CQ-Data | High \| Medium \| Low | `relative\path.cs:line` |
 
 ## Project-Convention Deviations
 
@@ -315,13 +369,29 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 ## Verification log
 - §Findings #4 — `Foo_When_X_Then_Y` cited at line 142 in `Foo.Tests/FooServiceTests.cs`; actual position is line 137. Citation corrected.
 - §Findings #9 — cluster head `BarTests.SetUp_When_…` no longer exists; cluster dropped.
+
+### Considered but not reported
+- `DateTime.UtcNow` called directly in `PricingService` (production code, untestable seam) — handed off; see ## Cross-Lens Flags (CQ-Reviewer).
+- One `[Fact]` with two asserts on the same returned object — below the value bar; both verify one behaviour.
 ```
 
 This is honest accounting. A report with two log corrections beats a report with two silent hallucinations.
 
+**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped finding can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+
 **Fallback.** When the MCP isn't available, fall back to `Grep` / `Read` for the same checks — slower but identical purpose. Do NOT skip the review.
 
 After this pass the report claims, implicitly, that every test citation has been re-verified within this run. Downstream agents may rely on that.
+
+### Value-bar pass
+
+Alongside the citation pass, re-read every finding and recommended action as a skeptical senior engineer on a pull request:
+
+- Can you state its **cost of inaction** in one concrete sentence — a missed regression, flaky-test trust erosion, an unreadable test, a real uncovered invariant? If not, cut it.
+- Is that cost load-bearing for *this* suite, or only in the abstract? If abstract, cut it or demote it to `## Optional / stylistic`. (Suite-wide consistency findings clear this by their nature.)
+- Would you wave it through, or push back on it as bikeshedding, if a colleague raised it in review? If you'd push back, it does not belong in Recommended Actions.
+
+If you drop findings here, re-run the citation count check above so no `§Findings #N` self-citation is left dangling.
 
 ## Output discipline
 
@@ -381,8 +451,9 @@ Use `### N. Title` for findings under `## Findings`. **Never use `#### N.`** —
 - Review only the target test project. You may read its referenced production projects for SUT context, but do not review other test projects.
 - Every finding MUST cite a real test method with file path and line number.
 - Each finding includes a concrete suggested rewrite, not just criticism.
-- At least 5 distinct recommended actions.
-- Do not review production code - that's CQ-Reviewer's job.
+- Findings and recommendations must clear the value bar (see *The value bar — every finding and recommendation must clear it*); there is **no minimum count**, and zero high-value findings is a valid outcome. Prove diligence with the **Coverage map**, not with a finding count. Each finding states its `**Cost of inaction:**`. Below-the-bar niceties go in `## Optional / stylistic`, never in Recommended Actions.
+- Do not review production code - that's CQ-Reviewer's job. **But** when you spot a material production-code issue while reading the tests (untestable static, direct clock/randomness in domain code, missing seam, mock diverging from prod), do not silently drop it — record it in `## Cross-Lens Flags` with a proposed owner and severity. List every dropped candidate in the `### Considered but not reported` block of the Verification log.
+- **Correctness-of-the-suite findings are scored independent of load** — a wrong-verdict test, a flaky test, or a missing test on a real invariant is a defect regardless of system load; do not de-rate it with a "not load-bearing at this scale" argument meant for performance items.
 - If the target project contains zero `[Fact]`/`[Test]`/`[TestMethod]` methods, that itself is the headline finding. If the target is not a test project at all, stop and report the mismatch (see Confirm the target).
 - Missing coverage at the **project level** (a production project has no test project) is in scope. Missing coverage at the **method/branch level** is not - that needs a coverage tool.
 - If Step 0b loaded any project conventions, every test-design deviation from them MUST appear in `## Project-Convention Deviations` and cite the rule in `CLAUDE.md §...` / `skill:...` / `agent:...` / `command:...` form. If no conventions were found, omit that section entirely.

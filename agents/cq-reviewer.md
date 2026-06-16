@@ -181,7 +181,7 @@ Before reading code, check whether a purpose / business-value report already exi
 - If the file does **not** exist, proceed without it — do not block the review and do not invent a purpose.
 - **Treat the purpose report as context, not as truth.** Where the codebase contradicts the purpose report (e.g. report says "stateless" but the code uses static mutable state), trust the code, raise the contradiction as a finding, and note it in the report's Summary.
 
-In your **Summary** section, add a one-line attribution: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging code quality without explicit business context."
+In your **Summary** section, add this attribution verbatim — emit exactly one of the two quoted strings below, with no parenthetical and no explanation of citation/anchor mechanics: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging code quality without explicit business context."
 
 ## Step 0b — Load project conventions (mandatory when present)
 
@@ -244,6 +244,24 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 7. **Testability scan.** Grep for direct system-clock and randomness calls in production code: `\bDateTime\.(Now|UtcNow|Today)\b`, `\bDateTimeOffset\.(Now|UtcNow)\b`, `\bGuid\.NewGuid\(\)`, `\bRandom\.(Shared|Next)\b`, `\bnew\s+HttpClient\b`. Each hit outside an obvious composition root is a §10 finding.
 8. **Performance scan (non-data).** EF Core / SQL foot-guns are CQ-Data's scope, not yours — skip `.ToListAsync`, `.Include`, `.AsNoTracking`, `IQueryable` etc. Grep for `\.Result\b`, `\.Wait\(\)`, `\.GetAwaiter\(\)\.GetResult\(\)` in production code (sync-over-async, per-site); `async\s+void` outside event handlers; `new\s+HttpClient\b` outside composition root; `\.Count\(\)\s*[><=!]` on in-memory `IEnumerable<T>` (not on a `DbSet` / `IQueryable` — that's CQ-Data); `new\s+JsonSerializerOptions\b` and `new\s+Regex\b` inside method bodies (per-call reconstruction).
 
+## The value bar — every finding and recommendation must clear it
+
+A review of a good codebase should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the code sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
+
+Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
+
+1. **Counterfactual — name the cost of inaction.** State concretely what breaks, slows, costs, corrupts, or risks if this stays as-is. "It would read more idiomatically", "this is the more modern pattern", and "best practice says X" are NOT costs of inaction. If the only honest justification is taste or idiom with no consequence, the item fails the bar.
+2. **Load-bearing at *this* system's context.** The consequence must actually manifest given the real scale, criticality, and lifetime of this system — taken from `Purpose.md` when present, inferred otherwise — not in the abstract. The same code earns different verdicts in different systems: a pattern that only bites far above this system's load, or only matters for a long-lived core platform when this is a throwaway internal tool, is below the bar here. Say so ("considered — not load-bearing at this system's scale") rather than escalating it.
+3. **Benefit must exceed churn.** The fix's payoff must outweigh the cost and risk of the change. A refactor touching dozens of files to remove a harmless idiom (e.g. a verb-consistency rename across 40 call sites that no one is confused by) rarely clears this.
+
+**Project-convention deviations are exempt from the taste test.** The team itself decided the convention matters, so a deviation is above the bar by definition — its cost of inaction is "drift from the team's own agreed standard". They still belong in `## Project-Convention Deviations`, not in Recommended Actions.
+
+**Proving diligence without a count.** Because there is no minimum finding count, you MUST instead demonstrate coverage: the `## Coverage map` section (see Output) lists every dimension in **Scope of review** with a `clean` / `N findings` verdict. Thoroughness is proven by the breadth of what you examined, not by the number of problems you reported.
+
+**Severity is load-independent for correctness findings.** The "load-bearing at this system's scale" test (bar #2) de-rates *throughput / performance* findings when the baseline is small — those bite only at scale. It does NOT de-rate **correctness, data-integrity, or security** findings: a swallowed exception on a critical path, PII/secrets logged in clear, an `async void` that loses exceptions, or exceptions-as-control-flow that corrupts state is wrong at one user and wrong at scale. Score those independent of load — floor-Medium, usually High — and never demote them with "not load-bearing at this scale" reasoning meant for performance items.
+
+**Lens ownership is not a reason to demote.** Never move a High/Medium issue into `## Optional / stylistic`, and never drop it, *solely* because it belongs to another lens. "Below the value bar" is for genuine niceties with no cost of inaction — not for real issues you are handing off. A material out-of-lens issue goes in `## Cross-Lens Flags` (with a proposed owner and severity); secrets / config / credential-fallback route to **CQ-Architect**, the owner of last resort. This is the rule that stops a real High from evaporating in the hand-off between lenses.
+
 ## Output
 
 Write the report to `<working-directory>\CQ-Reviews\projects\<Project-Name>\CodeReview.md` (see the deliverable section above for how to derive `<Project-Name>`). Create the directory if it doesn't exist.
@@ -270,6 +288,26 @@ For each action class with ≥1 outlier, one row. If no drift was found in a cat
 
 If the codebase has no consistent project verb for an action class (every variant used ~equally), record that explicitly with a row like `| Persist to DB | (no convention; Save×4 / Write×3 / Persist×3) | 10 | — |` and raise it as a single Maintainability finding rather than per-method drift.
 
+## Coverage map
+
+One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
+
+| Dimension | Verdict |
+|---|---|
+| Semantic naming & consistency | clean / <N> findings |
+| Class & method size | clean / <N> findings |
+| Single Responsibility / cohesion | clean / <N> findings |
+| Minimal API best practices | clean / <N> findings |
+| Pattern & structure consistency | clean / <N> findings |
+| API design ergonomics | clean / <N> findings |
+| Logging | clean / <N> findings |
+| Readability | clean / <N> findings |
+| Maintainability | clean / <N> findings |
+| Testability | clean / <N> findings |
+| Performance (non-data) | clean / <N> findings |
+| Recognized anti-patterns | clean / <N> findings |
+| Encapsulation | clean / <N> findings |
+
 ## Findings
 
 ### 1. <Issue title>
@@ -282,6 +320,7 @@ If the codebase has no consistent project verb for an action class (every varian
 \`\`\`
 
 **Why it's a problem:** <one paragraph>
+**Cost of inaction:** <what concretely breaks / slows / costs / corrupts / risks if left as-is, and why it bites at *this* system's scale and criticality — not "more idiomatic" or "best practice". A finding that cannot fill this line does not belong here.>
 
 ---
 
@@ -289,10 +328,28 @@ If the codebase has no consistent project verb for an action class (every varian
 
 ## Recommended Actions
 
-At least 5 concrete, prioritized actions:
+List only actions that clear the value bar, ordered by impact — there is **no minimum**. If the code is sound it is correct for this list to be short or empty; write "No material actions — the code quality is sound" rather than padding. Each action carries the cost of inaction from the finding it addresses.
 
 1. **<Action title>** - <what to do, where, and the expected benefit>
 2. ...
+
+## Optional / stylistic (below the value bar)
+
+(Omit this whole section if there is nothing to put in it — do not pad it.)
+
+Legitimate niceties that did NOT clear the value bar: idiomatic preferences, modern-pattern swaps, cosmetic refactors with no nameable cost of inaction. They live here, clearly separated, so a matter of taste is never mistaken for a recommendation that matters. One line each — do not write full findings for them.
+
+- <one-line nicety> — <why it's below the bar, e.g. "no consequence at this scale; pure idiom">
+
+## Cross-Lens Flags
+
+(Do NOT omit this section to save space. If you genuinely spotted nothing outside your lens, keep the heading and write "None — nothing material spotted outside the code-quality lens.")
+
+Material issues you noticed that fall **outside** your lens (architecture / data-layer / test concerns you tripped over while reading the code). Record them here as one-line flags rather than silently dropping them or demoting them to `## Optional / stylistic`. Each flag names a proposed owner lens and a proposed severity, so the issue cannot vanish because every lens assumed another owned it. Secrets / config / credential-fallback issues route to **CQ-Architect**, the owner of last resort — do not bury a committed-key or default-credential observation as a stylistic note. The summary/aggregation step diffs these flags against the owners' actual findings and warns on any flag left unowned.
+
+| Issue (one line) | Proposed owner | Proposed severity | Evidence (`file:line`) |
+|---|---|---|---|
+| ... | CQ-Architect \| CQ-Data \| CQ-Test-Reviewer | High \| Medium \| Low | `relative\path.cs:line` |
 
 ## Project-Convention Deviations
 
@@ -342,13 +399,30 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 ## Verification log
 - §Findings #3 — cited line corrected from `MgrSvc.cs:142` → `MgrSvc.cs:137` during self-review.
 - §Findings #11 — dropped; named dissenters had already been renamed in a recent commit; no current divergence.
+
+### Considered but not reported
+- `{DeviceId}` placeholder actually carries `BtFriendlyName` (PII in logs) — kept as a finding (§7 Logging); noting here it was weighed for severity, not cut.
+- `DownloadPackageHandler` injects concrete `DbContext` — DIP/pattern-consistency; kept as a finding, not cut.
+- Verb drift on 1 mapper — below the value bar; single site, no one is confused.
 ```
 
 This is honest accounting. A report with two log corrections beats a report with two silent hallucinations.
 
+**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped finding — a PII-in-logs leak, a DIP violation — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+
 **Fallback.** When the MCP isn't available, fall back to `Grep` / `Read` for the same checks — slower but identical purpose. Do NOT skip the review.
 
 After this pass the report claims, implicitly, that every citation has been re-verified within this run. Downstream agents may rely on that.
+
+### Value-bar pass
+
+Alongside the citation pass, re-read every finding and recommended action as a skeptical senior reviewer on a pull request:
+
+- Can you state its **cost of inaction** in one concrete sentence? If not, cut it.
+- Is that cost load-bearing at *this* system's context, or only in the abstract / at a scale this system will not reach? If abstract, cut it or demote it to `## Optional / stylistic`.
+- Would you wave it through, or push back on it as bikeshedding, if a colleague raised it in review? If you'd push back, it does not belong in Recommended Actions.
+
+If you drop findings here, re-run the citation count check above so no `§Findings #N` self-citation is left dangling.
 
 ## Output discipline
 
@@ -411,11 +485,13 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 ## Rules
 
 - Every finding MUST include a real code snippet with file path and line number from the actual solution. No invented examples.
-- Provide at least 5 distinct recommended actions.
+- Findings and recommendations must clear the value bar (see *The value bar — every finding and recommendation must clear it*); there is **no minimum count**, and zero high-value findings is a valid outcome. Prove diligence with the **Coverage map**, not with a finding count. Each finding states its `**Cost of inaction:**`. Below-the-bar niceties go in `## Optional / stylistic`, never in Recommended Actions.
 - Be concrete and specific - "improve naming" is not an action; "rename `MgrSvc` to `CustomerManagementService` in `Services/MgrSvc.cs:14` and update 7 callers" is.
 - Naming-consistency findings recommend conformance to the existing project verb. Do not recommend a different verb unless the existing project verb is itself misleading (then file as a `Semantic naming` finding instead).
 - Do not surface findings already caught by static analyzers (cyclomatic complexity, nesting depth, raw line counts, casing, unused usings, nullability gaps). Surface only judgement-call findings.
 - Do not review tests - that's CQ-Test-Reviewer's job.
 - Do not review architecture - that's CQ-Architect's job.
+- **Correctness / security findings are scored independent of load** (swallowed exceptions on critical paths, PII/secrets in logs, exceptions-as-control-flow that corrupts state) — floor-Medium, usually High. Only performance/throughput findings get the "not load-bearing at this scale" de-rate.
+- **Record material out-of-lens issues in `## Cross-Lens Flags`**, never demote them to `## Optional / stylistic` on ownership grounds; route secrets/config to CQ-Architect (owner of last resort). List every dropped candidate in the `### Considered but not reported` block of the Verification log.
 - If a category has no issues, say so explicitly rather than padding.
 - If Step 0b loaded any project conventions, every code-quality deviation from them MUST appear in `## Project-Convention Deviations` and cite the rule in `CLAUDE.md §...` / `skill:...` / `agent:...` / `command:...` form. If no conventions were found, omit that section entirely.

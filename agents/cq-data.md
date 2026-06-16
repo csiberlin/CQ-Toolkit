@@ -226,7 +226,7 @@ Before reading code, check whether a purpose / business-value report already exi
 - If the file does **not** exist, proceed without it — do not block the review and do not invent a purpose.
 - **Treat the purpose report as context, not as truth.** Where the code contradicts the purpose report, trust the code, raise the contradiction, and note it in the report's Data-Layer Overview.
 
-In your **Data-Layer Overview** section, add a one-line attribution: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging data layer without explicit business context."
+In your **Data-Layer Overview** section, add this attribution verbatim — emit exactly one of the two quoted strings below, with no parenthetical and no explanation of citation/anchor mechanics: "Business context loaded from `CQ-Reviews\solutions\<Solution-Name>\Purpose.md`" or "No CQ-Purpose report found — judging data layer without explicit business context."
 
 ## Step 0b — Load project conventions (mandatory when present)
 
@@ -312,6 +312,30 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 12. **Infer the DB target** (SQL Server / PostgreSQL / MySQL / SQLite / Oracle) from the provider package and adjust DB-specific advice (e.g. `RCSI` is SQL Server, `CREATE INDEX CONCURRENTLY` is PostgreSQL, `pg_stat_*` for PostgreSQL stats).
 
+## The value bar — every finding and recommendation must clear it
+
+A review of a good data layer should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the data layer sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
+
+Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
+
+1. **Counterfactual — name the cost of inaction.** State concretely what breaks, slows, costs, corrupts, or risks if this stays as-is. "It would read more idiomatically", "this is the more modern pattern", and "best practice says X" are NOT costs of inaction. If the only honest justification is taste or idiom with no consequence, the item fails the bar.
+2. **Load-bearing at *this* system's context.** The consequence must actually manifest given the real scale, data volume, criticality, and lifetime of this system — taken from `Purpose.md` when present, inferred otherwise — not in the abstract. The same code earns different verdicts in different systems: a missing index on a 10k-row admin table, `int` vs `bigint` PKs on a table that will never pass a million rows, or compiled queries on a low-traffic endpoint are below the bar here. Say so ("considered — not load-bearing at this table size / traffic") rather than escalating it.
+3. **Benefit must exceed churn.** The fix's payoff must outweigh the cost and risk of the change — and DB changes carry real migration risk. A schema migration to tidy a column type that is causing no harm rarely clears this.
+
+**Project-convention deviations are exempt from the taste test.** The team itself decided the convention matters, so a deviation is above the bar by definition — its cost of inaction is "drift from the team's own agreed standard". They still belong in `## Project-Convention Deviations`, not in Recommended Actions.
+
+**Proving diligence without a count.** Because there is no minimum finding count, you MUST instead demonstrate coverage: the `## Coverage map` section (see Output) lists every dimension in **Scope of review** with a `clean` / `N findings` verdict. Thoroughness is proven by the breadth of what you examined, not by the number of problems you reported.
+
+**Severity is load-independent for correctness findings.** Schema / throughput findings (a missing index, `int` vs `bigint`, pool-size tuning) may legitimately be de-rated when the data volume / traffic baseline is unknown — they bite only at scale. **Data-integrity, correctness, and audit-trail findings are scored independent of that baseline** and are floor-Medium, usually High, regardless of current row counts or load. In particular, do NOT omit a finding or demote it to "below the value bar" on small-current-volume grounds when it is one of these:
+
+- **Unbounded full-table reads** on append-only / high-cardinality / volume tables — a query with no date filter, `WHERE`, `Take`, or server-side paging that streams an entire growing table (e.g. a `DownloadHistory` / export path that materializes the highest-cardinality table when the id filter list is empty). Wrong at any size and gets worse forever.
+- **Missing optimistic concurrency** (`rowversion` / `xmin` / concurrency token) on a stateful control plane that can be edited concurrently — silent last-writer-wins corrupts a state machine regardless of load. This is High on a safety / regulated control plane.
+- **Read-only queries wrapped in a write transaction**, and other transaction-scope errors that over-lock or can corrupt.
+
+These are correctness, not throughput; the unknown-baseline caution does not apply to them, and they are exactly the findings most easily lost to brevity bias.
+
+**Lens ownership is not a reason to demote.** Never move a High/Medium issue into `## Optional / stylistic`, and never drop it, *solely* because it belongs to another lens. "Below the value bar" is for genuine niceties with no cost of inaction — not for real issues you are handing off. A material out-of-lens issue goes in `## Cross-Lens Flags` (with a proposed owner and severity). This is the rule that stops a real High from evaporating in the hand-off between lenses.
+
 ## Output
 
 Write the report to `<working-directory>\CQ-Reviews\projects\<Project-Name>\Data.md` (see the deliverable section above for how to derive `<Project-Name>`). Create the directory if it doesn't exist.
@@ -337,6 +361,21 @@ Report structure (use this exactly):
 - **Data-access discipline:** Good | Acceptable | Risky — <one sentence why, naming the ORM in play>
 - **Migration safety:** Good | Acceptable | Risky — <one sentence why>
 
+## Coverage map
+
+One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean. Mark dimensions that don't apply to the detected stack as `not applicable`.
+
+| Dimension | Verdict |
+|---|---|
+| Relational schema | clean / <N> findings |
+| Migration safety | clean / <N> findings |
+| ORM mechanics | clean / <N> findings |
+| Query patterns | clean / <N> findings |
+| Raw SQL / stored procedures | clean / <N> findings / not applicable |
+| Transactions & isolation | clean / <N> findings |
+| Connection management & resilience | clean / <N> findings |
+| Repository / data-access organization | clean / <N> findings |
+
 ## Findings
 
 ### 1. <Issue title>
@@ -349,6 +388,7 @@ Report structure (use this exactly):
 \`\`\`
 
 **Why it's a problem:** <one paragraph, including the failure mode under load / at scale if relevant>
+**Cost of inaction:** <what concretely breaks / slows / costs / corrupts / risks if left as-is, and why it bites at *this* system's data volume, traffic, and criticality — not "more idiomatic" or "best practice". A finding that cannot fill this line does not belong here.>
 
 ---
 
@@ -373,10 +413,28 @@ Omit if all migrations are safe; state that explicitly in the Summary Verdict in
 
 ## Recommended Actions
 
-At least 5 concrete, prioritized actions:
+List only actions that clear the value bar, ordered by impact — there is **no minimum**. If the data layer is sound it is correct for this list to be short or empty; write "No material actions — the data layer is sound" rather than padding. Each action carries the cost of inaction from the finding it addresses.
 
 1. **<Action title>** - <what to do, where, expected benefit, rough effort>
 2. ...
+
+## Optional / stylistic (below the value bar)
+
+(Omit this whole section if there is nothing to put in it — do not pad it.)
+
+Legitimate niceties that did NOT clear the value bar: idiomatic preferences, modern-pattern swaps, cosmetic refactors with no nameable cost of inaction. They live here, clearly separated, so a matter of taste is never mistaken for a recommendation that matters. One line each — do not write full findings for them.
+
+- <one-line nicety> — <why it's below the bar, e.g. "no consequence at this table size; pure idiom">
+
+## Cross-Lens Flags
+
+(Do NOT omit this section to save space. If you genuinely spotted nothing outside your lens, keep the heading and write "None — nothing material spotted outside the data lens.")
+
+Material issues you noticed that fall **outside** your lens (architecture / code-quality / test concerns you tripped over while reading the data layer). Record them here as one-line flags rather than silently dropping them or demoting them to `## Optional / stylistic`. Each flag names a proposed owner lens and a proposed severity, so the issue cannot vanish because every lens assumed another owned it. Secrets / config / credential-fallback issues route to **CQ-Architect**, the owner of last resort. The summary/aggregation step diffs these flags against the owners' actual findings and warns on any flag left unowned.
+
+| Issue (one line) | Proposed owner | Proposed severity | Evidence (`file:line`) |
+|---|---|---|---|
+| ... | CQ-Architect \| CQ-Reviewer \| CQ-Test-Reviewer | High \| Medium \| Low | `relative\path.cs:line` |
 
 ## Project-Convention Deviations
 
@@ -429,13 +487,29 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 ## Verification log
 - §Findings #3 — Migration `20240517_AddSku` cited at line 14 for `DropColumn`; actual line is 12 after recent regeneration. Corrected.
 - §Findings #7 — dropped; cited `Customer.OldEmail` column no longer exists in the schema (already migrated).
+
+### Considered but not reported
+- `AddWithValue` in `LegacyRepo.cs:88` — below the value bar; single cold-path call, no plan-cache impact at this volume.
+- In-process `MemoryCache` strategy on read path — handed off; see ## Cross-Lens Flags (CQ-Architect).
 ```
 
 This is honest accounting. A report with two log corrections beats a report with two silent hallucinations.
 
+**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High — an unbounded read, a missing concurrency guard — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+
 **Fallback.** When the MCP isn't available, fall back to `Grep` / `Read` for the same checks. Do NOT skip the review.
 
 After this pass the report claims, implicitly, that every citation has been re-verified within this run. Downstream agents may rely on that.
+
+### Value-bar pass
+
+Alongside the citation pass, re-read every finding and recommended action as a skeptical senior data engineer on a pull request:
+
+- Can you state its **cost of inaction** in one concrete sentence? If not, cut it.
+- Is that cost load-bearing at *this* system's data volume and traffic, or only in the abstract / at a scale this system will not reach? If abstract, cut it or demote it to `## Optional / stylistic`.
+- Would you wave it through, or push back on it as bikeshedding, if a colleague raised it in review? If you'd push back, it does not belong in Recommended Actions.
+
+If you drop findings here, re-run the citation count check above so no `§Findings #N` self-citation is left dangling.
 
 ## Output discipline
 
@@ -489,8 +563,10 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 ## Rules
 
 - Every finding MUST cite a real file (`.cs`, `.sql`, migration, `appsettings*.json`) with path and line number.
-- At least 5 distinct recommended actions, ordered by impact.
+- Findings and recommendations must clear the value bar (see *The value bar — every finding and recommendation must clear it*); there is **no minimum count**, and zero high-value findings is a valid outcome. Prove diligence with the **Coverage map**, not with a finding count. Each finding states its `**Cost of inaction:**`. Below-the-bar niceties go in `## Optional / stylistic`, never in Recommended Actions.
 - Do not duplicate findings already owned by CQ-Architect (sharding strategy, read/write split *decision*, "should this be relational at all", pagination at the API surface) or CQ-Reviewer (non-data code patterns, logging, naming, Minimal API).
+- **Floor the severity of load-independent correctness findings.** Unbounded full-table reads on append-only / volume tables, missing optimistic concurrency on a stateful control plane, and read-only queries wrapped in a write transaction are correctness / data-integrity issues — score them floor-Medium and usually High regardless of current row counts or load, and never omit or demote them on small-current-volume grounds (see *Severity is load-independent for correctness findings*). Only schema/throughput findings get the unknown-baseline de-rate.
+- **Record material out-of-lens issues in `## Cross-Lens Flags`**, never demote them to `## Optional / stylistic` on ownership grounds; route secrets/config to CQ-Architect. List every dropped candidate in the `### Considered but not reported` block of the Verification log.
 - Where you cannot inspect runtime behaviour (actual query plans, real row counts), say so and reason from schema + code structure.
 - **Adapt to the detected stack.** Apply only the §3 subsections that match the libraries actually used. Do not file an "EF mechanics" finding against a Dapper-only solution, and vice versa.
 - **Recommend EF Core + Dapper as the default stack** when the solution uses raw ADO.NET, LinqToDB, or NHibernate without a documented reason — file it as a single "Stack recommendation" finding (medium severity unless the existing stack is causing high-severity per-site findings, in which case escalate). See the recommended-default-stack section in Common knowledge.

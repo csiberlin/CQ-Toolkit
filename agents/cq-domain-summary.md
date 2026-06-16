@@ -91,6 +91,10 @@ For each source report, walk its `## Findings` section and capture each finding 
 - The file/line citation, if any
 - The proposed remediation, if any
 
+**Read only `## Findings` — ignore the other report sections.** Per-unit reports now carry a `## Coverage map` (a per-dimension `clean / N findings` attestation), a `## Optional / stylistic (below the value bar)` section (cosmetic niceties the reviewer deliberately kept out of its findings), and a `## Cross-Lens Flags` section (issues a reviewer spotted *outside* its own lens, tagged with a proposed owner). Capture findings **only** from `## Findings`. NEVER promote a `## Optional / stylistic` item into a theme, a finding row, or a recommended action — those items failed the reviewer's value bar by design, and re-surfacing them here defeats it. The `## Coverage map` is not a finding source either; you may read it to attest that a dimension was clean across units (see the all-clean path in Step 4), but do not mine it for findings.
+
+**Leave `## Cross-Lens Flags` alone.** This domain summary sees only one lens, so it cannot tell whether a flag was picked up by its proposed owner. Cross-lens reconciliation (diffing flags against owners' findings, and resolving contradictory severities across lenses) is the **top-level `CQ-Summary` agent's** job — it is the only step that sees all lenses for a unit at once (see `cq-summary.md` §Phase B Step 4b). Do not promote, drop, or act on Cross-Lens Flags here.
+
 **Pre-filter — skip findings that have zero chance of promoting.** A theme will only promote to the cross-cutting block if it (a) appears in ≥2 solutions, OR (b) is a single High-severity finding tagged with `50x impact: Yes`. Apply that filter at extraction time:
 
 1. First pass: collect the **Category** label of every finding into a `{Category → set(solutions)}` map. Categories appearing in ≥2 solutions are *candidate* categories.
@@ -108,6 +112,8 @@ Group the extracted findings by **recurring theme** within your domain. A theme 
 - It is a single High-severity finding with `50x impact: Yes`.
 
 Hard cap: **≤8 themes**. Order themes by combined-severity × solution-count (highest first).
+
+**All-clean portfolio.** If the source reports collectively contain zero findings (every unit's `## Findings` is empty / "no material findings"), that is a legitimate outcome under the reviewers' value bar — not a failure to look. Do NOT loop or invent themes. Write the summary with its required headings, an empty `## Cross-cutting themes` and `## Findings — diagnosis & fix` (state "No cross-cutting findings — all <N> units reviewed clean; see each unit's Coverage map"), `K = 0`, and `R = 0`. The empty-table red-flag in `## Rejected candidates` does not apply in this case.
 
 ### Step 5 — Verify
 
@@ -224,7 +230,7 @@ One bullet per verification step actually performed for this domain. Routine ver
 
 ### `## Rejected candidates` — single table
 
-Row count MUST equal `R` from the header counters block. Empty table is a red flag — re-do verification before writing.
+Row count MUST equal `R` from the header counters block. When findings existed and you promoted some, an empty table is a red flag — re-do verification before writing. An empty table is legitimate only when there were genuinely few/zero candidates to weigh (an all-clean or near-clean portfolio — see Step 4); in that case set `R = 0` and do not loop.
 
 ```
 | Candidate | Where it came from | Why rejected |
@@ -256,5 +262,7 @@ If any check fails, fix the file before writing.
 - Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days.
 - A theme that appears in only one solution is **not** promoted to the cross-cutting block unless it carries portfolio-level risk (e.g. shared infra, secret leakage). Demote everything else to "Per-solution gaps".
 - Do NOT invent issues that are absent from both the source reports and the codebase. If you can't cite it, you can't claim it.
+- Do NOT promote anything from a per-unit report's `## Optional / stylistic (below the value bar)` section. Those items failed the reviewer's value bar by design; surfacing them here re-introduces the cosmetic noise the bar exists to remove. Aggregate `## Findings` only.
+- An all-clean domain (zero findings across all units) is a valid result — emit the clean attestation from Step 4, not an invented theme. Zero is not failure.
 - Do NOT silently rewrite source-report findings; if a source-report claim is wrong, note it in the Verification log and proceed with the corrected position.
 - Target ~2 screenfuls of content. The reader is a tech lead deciding where to invest.

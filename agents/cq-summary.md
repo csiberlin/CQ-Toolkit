@@ -142,6 +142,7 @@ Ignore previous-generation `CQ-*-Summary.md` files in the folder when *reading* 
 1. `Glob` `CQ-Reviews/solutions/*/*.md` and `CQ-Reviews/projects/*/*.md`; derive `{Unit, Lens}` from each match's parent folder (the unit) and basename (the lens).
 2. Build an inventory: for each solution, mark which of `{Purpose, Architect}` exist; for each project, mark which of `{CodeReview, Data, TestReview}` exist.
 3. If `<2` solutions exist OR the solutions have `<2` reports each on average, write a short "insufficient inputs" report into `CQ-Summary.md` and stop.
+4. **All-clean portfolio.** If ≥2 solutions have reports but those reports collectively contain zero findings (every `## Findings` empty / "no material findings" under the reviewers' value bar), that is a legitimate clean result, not a failure to look. Still dispatch the three domain summaries (each writes its own all-clean attestation), then write `CQ-Summary.md` with empty theme/diagnosis tables stating "No cross-cutting findings — all <N> solutions reviewed clean", `K = 0`, `R = 0`. The zero-rejections red-flags later in this spec do not apply when there were no findings to weigh.
 
 ### 2. Phase A — produce the per-domain summaries (in parallel)
 
@@ -183,9 +184,10 @@ After all three domain summaries are on disk:
 
 1. `Read` the three files back into memory. They are now your primary inputs.
 2. Identify themes that **span multiple domains** (e.g. "missing observability" shows up in Architecture as no-tracing, in CodeReview as ad-hoc `Console.WriteLine`, in TestReview as no integration tests for failure modes). These cross-domain themes are the chief value-add of `CQ-Summary.md`.
-3. Identify **consolidation opportunities** (Step 4 below).
-4. Re-verify (Step 5) using the same rules the sub-agent applied (see §5 below), additionally citing the originating domain summary section (e.g. `Architecture-Summary §AR2`).
-5. Write `CQ-Summary.md` using the top-level output structure below.
+3. **Cross-lens reconciliation** (Step 4b below) — diff the per-unit `## Cross-Lens Flags` against the owners' actual findings, and reconcile contradictory severities across lenses. This is the only step that sees all lenses for a unit at once, so it is the toolkit's safety net against the two failure modes that motivated this pass: a flagged issue that no lens ends up owning, and one lens saying "no action" on a path another rates Medium+.
+4. Identify **consolidation opportunities** (Step 4 below).
+5. Re-verify (Step 5) using the same rules the sub-agent applied (see §5 below), additionally citing the originating domain summary section (e.g. `Architecture-Summary §AR2`).
+6. Write `CQ-Summary.md` using the top-level output structure below.
 
 Phase B may dip back into the original per-solution reports or the codebase for verification, but its **primary inputs** are the three domain summaries. The top-level summary should not duplicate single-domain themes that already live in a domain summary unless they also have cross-domain expression.
 
@@ -202,6 +204,18 @@ For each candidate:
 
 Reject candidates where the duplication is shallow (less than ~30 lines of similar code, or where coupling would defeat the abstraction).
 
+### 4b. Cross-lens reconciliation & verdict consistency (Phase B only)
+
+The three domain summaries each read only one lens. This step is the only place that sees **all lenses for a single unit at once**, so it must catch the two coordination failures the per-domain summaries cannot:
+
+**(a) Unowned cross-lens flags.** Each per-unit report (`solutions\<Sln>\Architect.md`, `projects\<Proj>\{CodeReview,Data,TestReview}.md`) now carries a `## Cross-Lens Flags` section: one-line issues a reviewer spotted outside its own lens, each tagged with a *proposed owner* lens and severity. `Read` those sections directly from the per-unit reports (this is a sanctioned Phase-B dip back into per-unit reports). For every flag:
+
+1. Look in the proposed owner's report for the **same unit** (Architect flags route to that solution's other-project reports or to Architect itself; secrets/config/credential-fallback always route to **CQ-Architect**, the declared owner of last resort).
+2. If the owner filed a corresponding owned finding, the flag is resolved — nothing to do.
+3. If **no owner picked it up**, the flag is *unowned* — this is exactly how a real High vanished in the past (a committed-secret flag punted by CodeReview that Architect never raised). Surface it: promote it to a `### X<n>` cross-cutting theme if it carries portfolio risk (secrets, shared infra), otherwise add it to `## Per-solution gaps` with the suggested owner. Record the reconciliation in `## Verification log` ("Cross-lens flag `<unit>` → proposed owner CQ-Architect had no corresponding finding; surfaced as `X<n>` / per-solution gap"). Never let an unowned flag pass silently.
+
+**(b) Contradictory severities on the same path.** When one lens rates a path "no action / within headroom" and another lens rates the **same code path** Medium or higher (the canonical case: Architect's scalability table says a list endpoint is "within headroom" because the API caps page size, while that project's Data report rates the underlying full-table-then-page query High), do NOT silently pick a side. **Adopt the higher severity**, record both citations in `## Verification log`, and carry the path forward in the appropriate diagnosis-&-fix table at the higher severity. The lens closest to the evidence wins — a query-shape verdict from CQ-Data overrides an API-surface "headroom" assertion from CQ-Architect.
+
 ### 5. Verify (final pass)
 
 Apply these verify rules to every row in `CQ-Summary.md` — they mirror what each `cq-domain-summary` sub-agent did for its own file:
@@ -212,7 +226,7 @@ Apply these verify rules to every row in `CQ-Summary.md` — they mirror what ea
 4. **Sanity check against the team's de-facto choices.** Don't recommend MediatR if multiple reports flag it as undesirable. Don't recommend CQRS where the codebase is CRUD.
 5. **Reject** any candidate that fails verification and record it in `## Rejected candidates`. The rejection count `R` is part of the deliverable confirmation — silently dropping items defeats the purpose.
 
-`CQ-Summary.md` MUST have a non-empty "Rejected candidates" table — a run with zero rejections at the top level is a red flag; re-do verification.
+When findings existed and you promoted some, `CQ-Summary.md` MUST have a non-empty "Rejected candidates" table — zero rejections in that case is a red flag; re-do verification. The exception is an all-clean / near-clean portfolio (see Discover step 4): if there were genuinely no candidates to weigh, `R = 0` is correct and no re-verification loop is needed.
 
 ## Output structure — per-domain summaries
 
@@ -360,7 +374,7 @@ Examples:
 - <Contradiction> — `<sourceA>` says X, `<sourceB>` says Y; codebase confirms X (`<file:line>`); going with X.
 ```
 
-**`## Rejected candidates`** — single table. Row count MUST equal `R` from the header counters. Empty table is a red flag; if you genuinely rejected nothing, return to the verify phase.
+**`## Rejected candidates`** — single table. Row count MUST equal `R` from the header counters. When findings were promoted, an empty table is a red flag — return to the verify phase. An empty table is legitimate only for an all-clean / near-clean portfolio (Discover step 4), where `R = 0` and no candidates existed to reject.
 
 ```
 | Candidate | Where it came from | Why rejected |
@@ -424,6 +438,9 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - A theme that appears in only one solution is **not** promoted to a domain summary's cross-cutting block unless it carries portfolio-level risk (e.g. shared infra, secret leakage). Demote everything else to "Per-solution gaps".
 - A theme that lives entirely within one domain is **not** promoted to `CQ-Summary.md`'s cross-cutting block unless it carries portfolio-level risk worth re-flagging across the broader audience. Single-domain themes belong in their domain summary.
 - Do NOT invent issues that are absent from both the source reports and the codebase. If you can't cite it, you can't claim it.
+- Do NOT promote anything from a per-unit report's `## Optional / stylistic (below the value bar)` section when Phase B dips back into those reports. Those items failed the reviewer's value bar by design; re-surfacing them in a summary defeats it. Summaries aggregate `## Findings` only. An all-clean portfolio (zero findings) is a valid result — emit the clean attestation from Discover step 4, not invented themes.
 - Do NOT silently rewrite source-report findings; if a source-report claim is wrong, note it in the Verification log and proceed with the corrected position.
+- **Diff every per-unit `## Cross-Lens Flags` against the owners' findings** (Step 4b). Any flag with no corresponding owned finding is *unowned* — surface it as a `### X<n>` theme (portfolio risk) or a `## Per-solution gaps` row (unit-specific), and log the reconciliation. Never let an unowned flag pass silently; secrets/config flags route to CQ-Architect as owner of last resort.
+- **Reconcile contradictory cross-lens verdicts** (Step 4b): where one lens says "no action / within headroom" and another rates the same path Medium+, adopt the **higher** severity, cite both sources in `## Verification log`, and carry the path forward at that severity. The lens closest to the evidence (e.g. CQ-Data on query shape) overrides an API-surface "headroom" assertion.
 - Keep each summary high-signal — target ~2 screenfuls of content per file, not exhaustive enumeration. The reader is a tech lead deciding where to invest.
-- The deliverable confirmation reply MUST include the rejected-candidates count for **each** of the four files. A run with zero rejections in any file is a red flag — re-do the verification phase before claiming the file as complete.
+- The deliverable confirmation reply MUST include the rejected-candidates count for **each** of the four files. When a file promoted findings, zero rejections in it is a red flag — re-do the verification phase before claiming it complete. Zero rejections is expected and acceptable for an all-clean / near-clean portfolio where there were no candidates to weigh (see Discover step 4).
