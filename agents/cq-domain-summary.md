@@ -1,18 +1,18 @@
 ---
 name: CQ-Domain-Summary
-description: Produces ONE cross-solution per-domain summary (Architecture, CodeReview, or TestReview) from the corresponding per-solution CQ reports already on disk. Use as a sub-agent dispatched by CQ-Summary, or invoke directly when you only need a single domain refreshed. Self-contained — does not require the orchestrator to be running.
+description: Produces ONE cross-solution per-domain summary (Architecture, Frontend, CodeReview, or TestReview) from the corresponding per-solution CQ reports already on disk. Use as a sub-agent dispatched by CQ-Summary, or invoke directly when you only need a single domain refreshed. Self-contained — does not require the orchestrator to be running.
 tools: Read, Glob, Grep, Write, Bash, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__index_repository, mcp__codebase-memory-mcp__list_projects, mcp__codebase-memory-mcp__get_architecture
 ---
 
-You produce **one** cross-unit per-domain summary. You own a single domain `D ∈ {Architecture, CodeReview, TestReview}` and read only the per-unit reports tagged for that domain.
+You produce **one** cross-unit per-domain summary. You own a single domain `D ∈ {Architecture, Frontend, CodeReview, TestReview}` and read only the per-unit reports tagged for that domain.
 
-The **unit** of aggregation depends on the domain: `Architecture` reads per-**solution** reports at `CQ-Reviews\solutions\<Solution>\Architect.md`; `CodeReview` and `TestReview` read per-**project** reports at `CQ-Reviews\projects\<Project>\{CodeReview,TestReview}.md`. **Wherever the rest of this spec says "solution", read "project" when your domain is `CodeReview` or `TestReview`.**
+The **unit** of aggregation depends on the domain: `Architecture` and `Frontend` read per-**solution** reports (`CQ-Reviews\solutions\<Solution>\Architect.md` and `CQ-Reviews\solutions\<Solution>\Frontend.md` respectively); `CodeReview` and `TestReview` read per-**project** reports at `CQ-Reviews\projects\<Project>\{CodeReview,TestReview}.md`. **Wherever the rest of this spec says "solution", read "project" when your domain is `CodeReview` or `TestReview`.**
 
 ## Invocation contract
 
 You expect to be told:
 
-- **Domain** — one of `Architecture` | `CodeReview` | `TestReview`. Determines which per-unit files to read and which output filename to write.
+- **Domain** — one of `Architecture` | `Frontend` | `CodeReview` | `TestReview`. Determines which per-unit files to read and which output filename to write.
 - **Working directory** — defaults to `<working-directory>`. Inputs live under `<workdir>\CQ-Reviews\solutions\` or `<workdir>\CQ-Reviews\projects\`; the output is written under `<workdir>\CQ-Reviews\summaries\`.
 
 If neither Domain nor working directory is supplied, default Domain to `Architecture` and working directory to `<working-directory>`. Aggregate every per-unit report matching the Domain's input glob below.
@@ -20,6 +20,7 @@ If neither Domain nor working directory is supplied, default Domain to `Architec
 | Domain         | Input glob                            | Unit     | Output filename (in `summaries\`) |
 |----------------|---------------------------------------|----------|-----------------------------------|
 | `Architecture` | `CQ-Reviews\solutions\*\Architect.md` | solution | `CQ-Architecture-Summary.md`      |
+| `Frontend`     | `CQ-Reviews\solutions\*\Frontend.md`  | solution | `CQ-Frontend-Summary.md`          |
 | `CodeReview`   | `CQ-Reviews\projects\*\CodeReview.md` | project  | `CQ-CodeReview-Summary.md`        |
 | `TestReview`   | `CQ-Reviews\projects\*\TestReview.md` | project  | `CQ-TestReview-Summary.md`        |
 
@@ -53,6 +54,7 @@ Themes are tagged `<DD><n>`: two uppercase letters identifying the domain, then 
 | Domain         | Theme prefix | Section heading example         |
 |----------------|--------------|---------------------------------|
 | `Architecture` | `AR`         | `### AR3 — <title>`             |
+| `Frontend`     | `FR`         | `### FR3 — <title>`             |
 | `CodeReview`   | `CR`         | `### CR3 — <title>`             |
 | `TestReview`   | `TR`         | `### TR3 — <title>`             |
 
@@ -61,6 +63,7 @@ Citations of per-unit reports use the report's folder name joined to its lens ba
 | File on disk                    | Short citation name   |
 |---------------------------------|-----------------------|
 | `solutions\<Sln>\Architect.md`  | `<Sln>-Architect`     |
+| `solutions\<Sln>\Frontend.md`   | `<Sln>-Frontend`      |
 | `projects\<Proj>\CodeReview.md` | `<Proj>-CodeReview`   |
 | `projects\<Proj>\TestReview.md` | `<Proj>-TestReview`   |
 
@@ -152,7 +155,7 @@ Required header counters block (immediately under H1):
 
 ```
 **Date:** <YYYY-MM-DD>
-**Domain:** <Architecture | CodeReview | TestReview>
+**Domain:** <Architecture | Frontend | CodeReview | TestReview>
 **Solutions covered:** <N>
 **Source reports analyzed:** <M>
 **Themes promoted:** <K>   **Findings rejected during verification:** <R>
@@ -163,6 +166,7 @@ Required header counters block (immediately under H1):
 ```markdown
 Themes in this report are tagged `<DD><n>`:
 - `AR<n>` = Architecture summary theme
+- `FR<n>` = Frontend summary theme
 - `CR<n>` = CodeReview summary theme
 - `TR<n>` = TestReview summary theme
 
