@@ -91,17 +91,18 @@ Focus exclusively on judgement-call concerns:
    - `ProblemDetails` for all errors (`AddProblemDetails()`), not bespoke JSON shapes.
 5. **Pattern & structure consistency** - two sub-dimensions:
    - **Code patterns.** If the codebase chose MediatR / `Result<T>` / Repository / Options pattern / `IHttpClientFactory` named clients, the choice should be applied everywhere it applies. Half-MediatR-half-direct-service is the real finding, not "they use MediatR." Conversely, flag *cargo-culted* patterns (Repository over EF Core `DbSet` adds no value).
+     - **Storage-abstraction / DIP consistency.** When sibling units share a seam (every handler depends on an injected `*Storage` / `*Repository` / `I*` abstraction) and one unit injects the *concrete* infrastructure type directly (e.g. one handler takes a concrete `DbContext` / `HttpClient` / `SqlConnection` while its siblings take a `*Storage` interface), that odd-one-out is a DIP + pattern-consistency finding — the inconsistent seam blocks substitution and testing and breaks the reader's "every handler looks the same" expectation. This is a code-quality call (the *pattern* of depending on a concrete vs an abstraction); the data-access mechanics inside the seam remain CQ-Data's. Flag the divergent handler or record it in *Considered but not reported*.
    - **Folder layout & file naming.** A developer should be able to guess where something belongs before searching. Flag drift: two projects in the same solution organising the same concept under different folder names (`Endpoints/` here, `Controllers/Api/` there); one-public-type-per-file violated (two unrelated public types in one `.cs`); file name not matching its public type; endpoint registrations scattered across `Program.cs`, ad-hoc `*Endpoints.cs` files, and inline `MapGroup` calls in random places. Feature-folder and layer-folder organisation are both fine; *mixed within one project* is not.
 6. **API design ergonomics** - exceptions as control flow at boundaries, swallowed exceptions (`catch { }`), `async void` outside event handlers, `.Result` / `.Wait()` / `.GetAwaiter().GetResult()` as per-call-site code-smell findings (do NOT frame as 50x / thread-pool starvation — that's CQ-Architect), `IEnumerable<T>` returns that hide deferred execution across layers.
 7. **Logging - consistent, detailed, and structured** - this is a first-class review dimension, not an afterthought:
    - **Structured logging only.** Use the `ILogger<T>` message-template form with named placeholders (`_logger.LogInformation("Order {OrderId} accepted for {CustomerId}", orderId, customerId)`) so values land as queryable fields in Seq / Application Insights / Elastic. Flag string interpolation or concatenation in log calls (`$"Order {orderId} ..."`, `"Order " + orderId`) — those produce a single opaque message string and lose the per-field index.
    - **LoggerMessage source generation** (`[LoggerMessage(EventId = …, Level = …, Message = "...")]`) for hot paths — flag solutions that allocate heavily in logging without it.
-   - **Consistent placeholder vocabulary.** The same domain concept must use the same placeholder name everywhere (`{OrderId}` not sometimes `{Id}`, sometimes `{order_id}`); inconsistency breaks log queries. Check at least 5–10 log statements across services and call out drift.
+   - **Consistent placeholder vocabulary.** The same domain concept must use the same placeholder name everywhere (`{OrderId}` not sometimes `{Id}`, sometimes `{order_id}`); inconsistency breaks log queries. Check at least 5–10 log statements across services and call out drift. **Also flag placeholder-name-vs-value disagreement**: a template like `_logger.LogInformation("... {DeviceId}", btFriendlyName)` where the placeholder name does not match the value actually bound to it. This is a real finding even when the value is benign — the field is queried under the wrong name. When the bound value is also PII (a friendly name, email, phone) logged under an innocuous-looking placeholder, report **both** halves: the PII leak *and* the vocabulary drift. Catching only the PII half and dropping the drift half is a recall gap.
    - **Coverage and detail.** Every public service method / endpoint handler should log: entry context (key IDs, not the whole request), the outcome (success with key result IDs, or failure with reason), and *every* exception path. Flag silent `catch` blocks and methods that fail without a single log line. Conversely, flag `LogInformation` storms inside tight loops (should be `LogDebug` or sampled).
    - **Correct levels.** `LogTrace`/`LogDebug` for diagnostic detail, `LogInformation` for business milestones, `LogWarning` for recoverable anomalies, `LogError` for handled failures with context, `LogCritical` for outages. Flag everything-is-Information or everything-is-Error.
    - **Scopes and correlation.** `BeginScope` (or middleware-injected scope) should attach `CorrelationId` / `TraceId` / tenant / user to every log line in a request. Flag handlers that log without scope or that re-log the same identifiers in every message instead of using a scope.
    - **No PII / secrets in logs.** Flag passwords, tokens, full payloads, full email/phone, etc. logged in clear.
-   - **Configuration sanity.** `appsettings.json` log levels should not silence the application's own namespace; flag a `Default: Warning` that hides the app's `Information` business events.
+   - **Configuration sanity (mandatory sweep — own this dimension).** Inspect **every** `appsettings.json` and `appsettings.{Environment}.json` log-level block — both `Serilog.MinimumLevel` and `Logging:LogLevel` shapes. A deployed environment (`AzureProd`, `AzurePreProd`, etc.) that raises `MinimumLevel.Default` / `Default` to `Warning` or above **without re-including the application's own namespace** silences the app's entire request/audit trace, device/business milestones, and structured-log decorators in production — they never reach the log sink. This is a real Medium observability defect that lives in deployed config, not code, and is easy to miss by reading only `Program.cs`. Flag it; do not let it go un-enumerated. (This dimension also gates the Architect's `Observability` coverage verdict — see `## Cross-Lens Flags` if you want to reinforce it there.)
 8. **Readability** — judgement-call readability concerns (metric-based items like cyclomatic complexity / nesting depth are out of scope; analyzer territory):
    - Mixed levels of abstraction within a single method — a method that calls one high-level function and then immediately does low-level bit-twiddling on the next line.
    - Boolean flag parameters (`DoX(foo, true, false)`) — split into two methods or replace with a named enum so the call site reads.
@@ -233,7 +234,7 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 2. Read `Program.cs` and any `*Endpoints.cs` / endpoint extension files to assess Minimal API usage.
 3. Sample classes across folders; do not read every file - target representative samples plus any class that looks unusually large via Bash `wc -l`.
 4. Grep for telltale patterns: `app.Map`, `Results.`, `TypedResults.`, `IRepository`, `MediatR`, `record `, `class `.
-5. Logging audit: grep for `_logger.Log`, `ILogger`, `LogInformation`, `LogError`, `LogWarning`, `BeginScope`, `LoggerMessage`, and the anti-patterns `Log{Information,Error,Warning,Debug}\(\$"`, `Log[A-Za-z]+\(".*" \+`, `catch\s*\([^)]*\)\s*\{\s*\}`, `catch\s*\{\s*\}`. Read at least one representative endpoint handler, one application/service method, one repository/integration class, and one exception-handling middleware to judge consistency, structured-logging discipline, level usage, and scope/correlation-id propagation. Also open `appsettings.json` / `appsettings.*.json` and inspect `Logging:LogLevel` to confirm the application's own namespace is not silenced.
+5. Logging audit: grep for `_logger.Log`, `ILogger`, `LogInformation`, `LogError`, `LogWarning`, `BeginScope`, `LoggerMessage`, and the anti-patterns `Log{Information,Error,Warning,Debug}\(\$"`, `Log[A-Za-z]+\(".*" \+`, `catch\s*\([^)]*\)\s*\{\s*\}`, `catch\s*\{\s*\}`. Read at least one representative endpoint handler, one application/service method, one repository/integration class, and one exception-handling middleware to judge consistency, structured-logging discipline, level usage, and scope/correlation-id propagation. Also open **every** `appsettings.json` / `appsettings.{Environment}.json` (Dev/PreProd/Prod/…) and inspect both `Logging:LogLevel` and `Serilog.MinimumLevel` to confirm no deployed environment raises `Default` above `Information` without re-including the application's own namespace — that silences the app's request/audit trace in production (see §7 Configuration sanity). This sweep is mandatory and a primary candidate source.
 6. **Verb-inventory pass** (for §1b naming consistency). Run a grep per action class and tally the verbs actually used so the project verb is picked deterministically, not guessed:
    - Persist: `grep -hroE '\b(Save|Write|Persist|Store|Insert|Upsert|Update|Add|Create)[A-Z][A-Za-z0-9]*\s*\(' --include='*.cs'`
    - Retrieve: `grep -hroE '\b(Get|Find|Fetch|Load|Read|Lookup|Query|Retrieve|List)[A-Z][A-Za-z0-9]*\s*\(' --include='*.cs'`
@@ -247,6 +248,8 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 ## The value bar — every finding and recommendation must clear it
 
 A review of a good codebase should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the code sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
+
+**Enumerate candidates before you filter (do this first, before the bar).** The value bar decides which candidates become findings — it must never decide which candidates *exist*. Before applying the bar, enumerate every plausible code-quality issue you can substantiate against the code: the full candidate set, including the ones you suspect will not survive the bar. The logging-configuration sweep (every `appsettings.*` log-level block — see *How to investigate* §5) is a mandatory source of candidates; a silenced production trace that is never even enumerated is the recall gap that hurts most. Then run each candidate through the bar. Every enumerated candidate MUST terminate in exactly one of three places — a `## Findings` entry, a `## Cross-Lens Flags` row, or a `### Considered but not reported` line in the Verification log. Nothing may evaporate. A candidate that is never written down anywhere is a *silent recall gap* — the single most damaging defect a review can have, because the reader cannot distinguish a deliberate cut from an oversight.
 
 Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
 
@@ -290,23 +293,25 @@ If the codebase has no consistent project verb for an action class (every varian
 
 ## Coverage map
 
-One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
+One row per dimension in **Scope of review**, each with a verdict **and a one-line basis**, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
 
-| Dimension | Verdict |
-|---|---|
-| Semantic naming & consistency | clean / <N> findings |
-| Class & method size | clean / <N> findings |
-| Single Responsibility / cohesion | clean / <N> findings |
-| Minimal API best practices | clean / <N> findings |
-| Pattern & structure consistency | clean / <N> findings |
-| API design ergonomics | clean / <N> findings |
-| Logging | clean / <N> findings |
-| Readability | clean / <N> findings |
-| Maintainability | clean / <N> findings |
-| Testability | clean / <N> findings |
-| Performance (non-data) | clean / <N> findings |
-| Recognized anti-patterns | clean / <N> findings |
-| Encapsulation | clean / <N> findings |
+**A `clean` verdict must be earned.** The allowed verdicts are `clean` / `<N> findings` / `not fully assessed`. Every row carries a **Basis** cell naming what you actually inspected to reach the verdict. For `clean`, the basis must cite the concrete surfaces checked — and for **Logging**, which is config-driven, `clean` is NOT earnable from code wiring alone: the basis must confirm you inspected **every** `appsettings.json` / `appsettings.{Environment}.json` log-level block (Serilog `MinimumLevel` and/or `Logging:LogLevel`) and that no deployed environment silences the app's own namespace. A dimension you did not inspect deeply enough to defend a `clean` basis MUST be marked **`not fully assessed`**, never `clean`: an unearned green stamp is *worse* than a missing finding, because it suppresses follow-up. If you cannot fill the basis line, you cannot claim `clean`.
+
+| Dimension | Verdict | Basis (what was inspected) |
+|---|---|---|
+| Semantic naming & consistency | clean / <N> findings / not fully assessed | <one line> |
+| Class & method size | clean / <N> findings / not fully assessed | <one line> |
+| Single Responsibility / cohesion | clean / <N> findings / not fully assessed | <one line> |
+| Minimal API best practices | clean / <N> findings / not fully assessed | <one line> |
+| Pattern & structure consistency | clean / <N> findings / not fully assessed | <one line> |
+| API design ergonomics | clean / <N> findings / not fully assessed | <one line> |
+| Logging | clean / <N> findings / not fully assessed | <one line — MUST cite the `appsettings.*` log-level blocks inspected> |
+| Readability | clean / <N> findings / not fully assessed | <one line> |
+| Maintainability | clean / <N> findings / not fully assessed | <one line> |
+| Testability | clean / <N> findings / not fully assessed | <one line> |
+| Performance (non-data) | clean / <N> findings / not fully assessed | <one line> |
+| Recognized anti-patterns | clean / <N> findings / not fully assessed | <one line> |
+| Encapsulation | clean / <N> findings / not fully assessed | <one line> |
 
 ## Findings
 
@@ -408,7 +413,7 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 
 This is honest accounting. A report with two log corrections beats a report with two silent hallucinations.
 
-**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped finding — a PII-in-logs leak, a DIP violation — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+**Considered but not reported is mandatory.** This block is the terminus for every enumerated candidate (see *Enumerate candidates before you filter*, including every `appsettings.*` log-level block from the configuration sweep) that did not become a `## Findings` entry or a `## Cross-Lens Flags` row. Your `## Verification log` MUST include a `### Considered but not reported` block listing every such candidate, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped finding — a PII-in-logs leak, a DIP violation, a silenced production trace — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
 
 **Fallback.** When the MCP isn't available, fall back to `Grep` / `Read` for the same checks — slower but identical purpose. Do NOT skip the review.
 

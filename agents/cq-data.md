@@ -86,6 +86,7 @@ Evaluate the solution across these dimensions:
 
    **3a. If EF Core** (`Microsoft.EntityFrameworkCore.*`):
    - **DbContext lifetime**: scoped per request is the default; flag singleton or transient `DbContext` registrations. Flag `DbContext` injected into a singleton service (captured-scope foot-gun).
+   - **Redundant / dead DI wiring on the composition root**: read the `Program.cs` / module registrations and flag a `DbContext` registered twice — the classic case is an explicit `AddScoped<TContext>()` (or `AddTransient`) *after* `AddDbContext<TContext>()`, which already registers the context as scoped. The second registration is dead wiring at best and a lifetime-override foot-gun at worst. Same for a `*Factory` / connection registered both by a helper extension and inline. Low severity, but it is real and concrete — report it or record it in *Considered but not reported*, do not silently skip it.
    - **Change tracking**: read-only queries should use `AsNoTracking()` (or `AsNoTrackingWithIdentityResolution()` if needed). Default `QueryTrackingBehavior` set globally is fine and worth flagging if absent on a read-heavy solution.
    - **Lazy loading**: virtual navigations + `UseLazyLoadingProxies` is almost always wrong for web APIs (silent N+1, serialization explosions). Flag.
    - **Query splitting**: `.Include(...).Include(...)` chains with 1:N navigations cause cartesian explosions; `AsSplitQuery()` or projection to a DTO is the fix.
@@ -139,6 +140,7 @@ Evaluate the solution across these dimensions:
 
    These apply to *any* ORM. Translate the EF Core idiom to the equivalent in the ORM in use.
 
+   - **Per-handler query-shape sweep (mandatory — run this before the value bar).** Enumerate *every* read handler / query method in scope and, for each, name (a) the worst-case row count it materialises and (b) whether any work runs per-row in a loop. **Any handler that issues a query inside a `Select` / `foreach` / `for` over another result set is a candidate N+1 — report it or record it in *Considered but not reported*; never let it go un-enumerated.** A statistics / aggregation / fan-out handler that recomputes a per-group or per-key query in a loop, especially one that materialises a high-cardinality table into memory because the final predicate can't be expressed in SQL, is the canonical miss. Counts that *can* be pushed to SQL but are computed in C# after a full read are part of the same finding.
    - **Over-fetch / in-memory filter**: an EF `.ToListAsync()` followed by in-memory `.Where(...)`, or a Dapper `QueryAsync<T>("SELECT * FROM Orders")` followed by `.Where(...)` in C#, or an ADO `SELECT *` reader iteration filtered after. → push the predicate to SQL.
    - **N+1**: an EF `foreach` triggering navigation-property SQL per row; or a Dapper `QueryAsync` returning IDs followed by a per-ID `QueryAsync` inside a loop; or ADO with the same shape. → batch (`IN (...)`), join, or use `QueryMultiple` / split-query.
    - **`.Count() > 0` instead of `.Any()`**: EF `IQueryable`, in-memory `IEnumerable`, or a Dapper `SELECT COUNT(*)` used as a yes/no check — replace with `EXISTS (...)` / `.AnyAsync()` / a `TOP 1` Dapper query.
@@ -306,7 +308,7 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 9. **Grep for transaction / connection concerns**: `BeginTransaction`, `TransactionScope`, `IsolationLevel`, `NOLOCK`, `WITH\s*\(\s*NOLOCK`, `READ UNCOMMITTED`, `Database\.Migrate\(\)`, `DbUp.*PerformUpgrade`.
 
-10. **Read connection-string handling** in `Program.cs` / `appsettings*.json`: where does it come from, is `EnableRetryOnFailure` (EF) / a Polly resilience pipeline (Dapper/ADO) configured, is `CommandTimeout` set, is `Max Pool Size` tuned, is the user-secret / Key Vault / managed-identity flow correct?
+10. **Read connection-string handling** in `Program.cs` / `appsettings*.json`: where does it come from, is `EnableRetryOnFailure` (EF) / a Polly resilience pipeline (Dapper/ADO) configured, is `CommandTimeout` set, is `Max Pool Size` tuned, is the user-secret / Key Vault / managed-identity flow correct? While in the composition root, also scan for **redundant / dead DI wiring** — an `AddScoped<TContext>()` (or `AddTransient`) after `AddDbContext<TContext>()`, or a connection factory registered twice (see §3a).
 
 11. **Read raw SQL files / stored procs** in `*.sql` / `Procedures\*.sql` / embedded resources. Check parameterization, `SET NOCOUNT ON`, `SET XACT_ABORT ON`, schema qualification, dynamic SQL.
 
@@ -315,6 +317,8 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 ## The value bar — every finding and recommendation must clear it
 
 A review of a good data layer should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the data layer sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
+
+**Enumerate candidates before you filter (do this first, before the bar).** The value bar decides which candidates become findings — it must never decide which candidates *exist*. Before applying the bar, enumerate every plausible data-layer issue you can substantiate against the code: the full candidate set, including the ones you suspect will not survive the bar. The per-handler query-shape sweep (see *How to investigate*) is a mandatory source of candidates here — an N+1 fan-out or an unbounded read that is never even enumerated is the recall gap that hurts most. Then run each candidate through the bar. Every enumerated candidate MUST terminate in exactly one of three places — a `## Findings` entry, a `## Cross-Lens Flags` row, or a `### Considered but not reported` line in the Verification log. Nothing may evaporate. A candidate that is never written down anywhere is a *silent recall gap* — the single most damaging defect a review can have, because the reader cannot distinguish a deliberate cut from an oversight.
 
 Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
 
@@ -363,18 +367,20 @@ Report structure (use this exactly):
 
 ## Coverage map
 
-One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean. Mark dimensions that don't apply to the detected stack as `not applicable`.
+One row per dimension in **Scope of review**, each with a verdict **and a one-line basis**, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean. Mark dimensions that don't apply to the detected stack as `not applicable`.
 
-| Dimension | Verdict |
-|---|---|
-| Relational schema | clean / <N> findings |
-| Migration safety | clean / <N> findings |
-| ORM mechanics | clean / <N> findings |
-| Query patterns | clean / <N> findings |
-| Raw SQL / stored procedures | clean / <N> findings / not applicable |
-| Transactions & isolation | clean / <N> findings |
-| Connection management & resilience | clean / <N> findings |
-| Repository / data-access organization | clean / <N> findings |
+**A `clean` verdict must be earned.** The allowed verdicts are `clean` / `<N> findings` / `not fully assessed` / `not applicable`. Every row carries a **Basis** cell naming what you actually inspected to reach the verdict. For `clean`, the basis must cite the concrete surfaces checked — for **Query patterns**, that means the per-handler query-shape sweep was actually run (name it); for **Connection management & resilience**, that means the connection-string + retry/pool/timeout config in `appsettings.*` / `Program.cs` was read, not just the `DbContext` wiring. A dimension you did not inspect deeply enough to defend a `clean` basis MUST be marked **`not fully assessed`**, never `clean`: an unearned green stamp is *worse* than a missing finding, because it suppresses follow-up. If you cannot fill the basis line, you cannot claim `clean`.
+
+| Dimension | Verdict | Basis (what was inspected) |
+|---|---|---|
+| Relational schema | clean / <N> findings / not fully assessed | <one line> |
+| Migration safety | clean / <N> findings / not fully assessed | <one line> |
+| ORM mechanics | clean / <N> findings / not fully assessed | <one line> |
+| Query patterns | clean / <N> findings / not fully assessed | <one line — MUST cite the per-handler query-shape sweep> |
+| Raw SQL / stored procedures | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Transactions & isolation | clean / <N> findings / not fully assessed | <one line> |
+| Connection management & resilience | clean / <N> findings / not fully assessed | <one line — incl. `appsettings.*` connection/retry config inspected> |
+| Repository / data-access organization | clean / <N> findings / not fully assessed | <one line> |
 
 ## Findings
 
@@ -495,7 +501,7 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 
 This is honest accounting. A report with two log corrections beats a report with two silent hallucinations.
 
-**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High — an unbounded read, a missing concurrency guard — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+**Considered but not reported is mandatory.** This block is the terminus for every enumerated candidate (see *Enumerate candidates before you filter*, including every handler from the per-handler query-shape sweep) that did not become a `## Findings` entry or a `## Cross-Lens Flags` row. Your `## Verification log` MUST include a `### Considered but not reported` block listing every such candidate, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High — an unbounded read, an N+1 fan-out, a missing concurrency guard — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
 
 **Fallback.** When the MCP isn't available, fall back to `Grep` / `Read` for the same checks. Do NOT skip the review.
 

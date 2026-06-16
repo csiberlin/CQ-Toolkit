@@ -24,6 +24,9 @@ If the solution folder contains multiple `.sln` files, pick the one whose name m
 - The file write IS the deliverable. Your final reply to the orchestrator must be a short confirmation containing only:
   1. The absolute path of the file you wrote.
   2. The number of deployable units, number of business-value points, number of domain-glossary rows, and the chosen `Criticality` value from the Solution profile.
+  3. The **Scale-signals disposition** (from Step 0) — exactly one of:
+     - `Scale signals: scaffolded — edit the table in <path> with the real load baseline (current req/s, concurrent users, device/customer count, growth); CQ-Architect's 50x analysis stays conditional until you do.`
+     - `Scale signals: kept — preserved the existing operator-provided Scale signals section unchanged.`
 - If you cannot write the file (tool error, missing permission), say so explicitly and stop — do not substitute an inline dump.
 
 This rule overrides any default sub-agent behaviour to "return results inline." It is non-negotiable.
@@ -76,6 +79,16 @@ Extract and convey:
    - README / XML docs that explicitly mention user counts, customer counts, device counts.
 9. **Domain glossary (downstream hand-off)** — 5–15 key domain terms with their canonical spelling in this codebase, plus any drift you noticed (e.g. `Customer` vs `Client` vs `Account` used for the same concept). CQ-Reviewer's §1a/§1b naming-consistency check anchors on this list.
 10. **Severity-calibration guidance (downstream hand-off, explicit)** — one short paragraph telling the other agents how to weight findings on *this* solution. Examples: "Findings in the certificate-renewal path are revenue-blocking; treat as High. Findings in the diagnostic endpoints are internal-tooling; treat as Low unless they leak PII." Be concrete enough that downstream agents can use it without re-deriving the criticality model.
+
+## Step 0 — Preserve a user-curated Scale signals section (do this before writing)
+
+The `## Scale signals` section carries the **load baseline** — current request volume, concurrent users, device/customer counts, growth plans. Most of these are NOT in the code; a human (operator / product owner) fills them in, and `CQ-Architect`'s 50x analysis (its Step 0c) treats them as its **highest-priority source**. So this one section is *user-owned*, not agent-owned, and must survive a regeneration. Before you generate anything:
+
+1. `Read` the target `CQ-Reviews\solutions\<Solution-Name>\Purpose.md` if it already exists (use `Bash`/`Glob` to check first).
+2. **If the file exists AND already contains a `## Scale signals` section** → capture that section **verbatim** and re-emit it unchanged in your regenerated report. Do NOT overwrite operator-provided numbers with `not-visible-in-code`, and do NOT re-derive them from code. Set your **Scale-signals disposition** to `kept`.
+3. **If the file does not exist, OR it exists but has no `## Scale signals` section** → generate the scaffold section from the template in `## Output` below: fill the evidence-based rows with the real cited figure from code (or `not-visible-in-code`), and leave the operator-owned rows (current load, concurrent users, device/customer count, growth) as `‹add manually: …›` placeholders — **never put an example or guessed number in any cell.** Set your **Scale-signals disposition** to `scaffolded`.
+
+This rule applies **only** to `## Scale signals`. Every other section is regenerated normally from the current code. Record the disposition (`kept` | `scaffolded`) — your final orchestrator reply MUST state it (see MANDATORY DELIVERABLE), so the user knows whether to go edit the table.
 
 ## How to investigate
 
@@ -150,19 +163,27 @@ Deployable units:
 
 ## Scale signals
 
-Evidence-based only. If a row is not visible in code, write `not-visible-in-code` and move on — do not invent numbers.
+This section is the **load baseline** for `CQ-Architect`'s 50x analysis. **The scaffold contains NO numbers — never emit an example or illustrative figure here, ever.** A value a reader could mistake for real data is the exact footgun this section avoids. Every value cell in a freshly scaffolded table is either a manual-entry placeholder or `not-visible-in-code`. Two kinds of row:
 
-| Signal | Value (or `not-visible-in-code`) | Evidence (file:line or config key) |
+- **Operator-owned rows** (top four) — current load, concurrent users, device/customer counts, growth. The code can never contain these, so **the agent must NEVER fill, infer, or guess them.** Always emit them as `‹add manually: …›` placeholders that name the expected unit/shape but carry no number. Only a human adds these. (Exception: the device/customer-count row may be filled *only* if a README / doc states an explicit count, cited — otherwise it too stays a manual placeholder.)
+- **Evidence-based rows** (the rest) — fill the value with the **real figure read from code/config plus its citation**, or write `not-visible-in-code`. There is no third option: a scaffold value is either a genuine cited fact or `not-visible-in-code`. Never an example, never a guess.
+
+Per Step 0, if this section already exists in the target `Purpose.md`, keep it verbatim instead of regenerating it — do not re-scaffold over a user's filled-in numbers.
+
+| Signal | Value | Evidence (file:line, config key, or `operator-provided <YYYY-MM-DD>`) |
 |---|---|---|
-| Designed throughput (req/s upper bound) | e.g. `~50 req/s per instance` | `Program.cs:42` rate-limiter `PermitLimit = 50` |
-| Default page size on list endpoints | e.g. `50` | `appsettings.json` `Paging:DefaultPageSize` |
-| Configured DB pool size | e.g. `200` | connection-string `Max Pool Size=200` |
-| Async/batch parallelism | e.g. `8` | `MaxParallelism` in `appsettings.json` |
-| Data retention window | e.g. `90 days` | `RetentionDays` config key |
-| Hosting tier / instance count cues | e.g. `2 instances behind LB (Bicep)` | `infra/main.bicep:80` |
-| Documented user/customer/device count | e.g. `200k devices` | `README.md:12` |
+| Current request volume (peak / sustained req/s) | `‹add manually: peak / sustained req/s›` | `‹operator-provided <YYYY-MM-DD>›` |
+| Concurrent users / clients | `‹add manually: concurrent users / clients›` | `‹operator-provided <YYYY-MM-DD>›` |
+| Documented user/customer/device count | `‹add manually: user / customer / device count›` | `‹operator-provided <YYYY-MM-DD>›` or `README.md:<line>` if documented |
+| Expected growth / multiplier | `‹add manually: growth factor over what horizon›` | `‹operator-provided <YYYY-MM-DD>›` |
+| Designed throughput (req/s upper bound) | `‹real value from rate-limiter config›` or `not-visible-in-code` | rate-limiter `PermitLimit` in `Program.cs`, if present |
+| Default page size on list endpoints | `‹real value from config›` or `not-visible-in-code` | `Paging:DefaultPageSize` in `appsettings.json`, if present |
+| Configured DB pool size | `‹real value from connection string›` or `not-visible-in-code` | `Max Pool Size` in the connection string, if present |
+| Async/batch parallelism | `‹real value from config›` or `not-visible-in-code` | `MaxParallelism` / `MaxBatchSize` in `appsettings.json`, if present |
+| Data retention window | `‹real value from config›` or `not-visible-in-code` | `RetentionDays` / `TtlInDays` config key, if present |
+| Hosting tier / instance count cues | `‹real value from infra manifest›` or `not-visible-in-code` | `*.bicep` / `*.tf` / deployment manifest, if present |
 
-If everything is `not-visible-in-code`, say so once in a short note under the table and let downstream agents know they must reason in the abstract.
+After writing the table, add a one-line note under it stating the operator rows are unfilled (`‹add manually: …›`) and that until a human supplies them, downstream agents (CQ-Architect's 50x analysis) must treat the baseline as unknown and reason conditionally.
 
 ## Domain glossary
 
@@ -217,7 +238,8 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - Every capability bullet MUST name at least one real class or method from the codebase.
 - Every business-value point MUST be grounded in observable code or integrations — no marketing fluff, no invented features.
 - The four hand-off sections (**Solution profile**, **Scale signals**, **Domain glossary**, **Severity-calibration guidance for downstream agents**) are MANDATORY and must use the exact headers above — downstream agents grep for them. Missing rows in the Solution-profile / Scale-signals tables go in as `not-visible-in-code`; never omit a row.
-- **Honesty over completeness in Scale signals.** When the code has no rate-limiter / no pagination config / no retention key, write `not-visible-in-code`. Inventing throughput numbers actively misleads downstream agents (CQ-Architect will build a 50x analysis on top of fiction). The right answer when the code is silent is to say so.
+- **Honesty over completeness in Scale signals — no numbers in the scaffold.** When the code has no rate-limiter / no pagination config / no retention key, write `not-visible-in-code`. For the operator-owned rows the code can never contain (current load, concurrent users, device/customer count, growth), always leave the `‹add manually: …›` placeholder — the agent must never fill, infer, or guess these; the user always adds them by hand. Never emit an example or illustrative figure in any value cell: a scaffold value is a real cited fact, `not-visible-in-code`, or a manual placeholder, and nothing else. Inventing throughput numbers actively misleads downstream agents (CQ-Architect will build a 50x analysis on top of fiction).
+- **Never clobber a user-curated `## Scale signals` section.** Per Step 0, if the target `Purpose.md` already has one, preserve it verbatim (`kept`); only scaffold the example section when the file or the section is absent (`scaffolded`). Always report the disposition in your final reply, and when you scaffolded, tell the user to edit the table with the real load baseline.
 - If you cannot determine the purpose with confidence (e.g. no controllers, no entry point, sparse code), say so explicitly in the report and list what additional artifacts (README, ADR, product brief) would be needed. The Solution profile / Scale signals / Glossary / Severity-calibration sections should still be filled in with whatever you *can* infer plus `not-visible-in-code` where you can't.
 - Keep the human-readable sections (What it is, Capabilities, Integrations, Business value) concise — target one screenful for those. The hand-off blocks (tables + the guidance paragraph) are extra and may push the total to two screens — that's fine.
 - Do not include code-quality, refactoring, or scalability findings — those are owned by other CQ agents.

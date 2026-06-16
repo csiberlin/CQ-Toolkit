@@ -173,6 +173,8 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 A review of a good frontend should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the frontend sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
 
+**Enumerate candidates before you filter (do this first, before the bar).** The value bar decides which candidates become findings — it must never decide which candidates *exist*. Before applying the bar, enumerate every plausible frontend issue you can substantiate against the code: the full candidate set, including the ones you suspect will not survive the bar. The threading, binding, virtualization, and leak passes (see *How to investigate*) are mandatory candidate sources. Then run each candidate through the bar. Every enumerated candidate MUST terminate in exactly one of three places — a `## Findings` entry, a `## Cross-Lens Flags` row, or a `### Considered but not reported` line in the Verification log. Nothing may evaporate. A candidate that is never written down anywhere is a *silent recall gap* — the single most damaging defect a review can have, because the reader cannot distinguish a deliberate cut from an oversight.
+
 Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
 
 1. **Counterfactual — name the cost of inaction.** State concretely what breaks, freezes, leaks, corrupts, or risks if this stays as-is. "It would read more idiomatically", "this is the more modern MVVM pattern", and "best practice says X" are NOT costs of inaction. If the only honest justification is taste or idiom with no consequence, the item fails the bar.
@@ -220,19 +222,21 @@ Report structure (use this exactly):
 
 ## Coverage map
 
-One row per dimension in **Scope of review (WPF)**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean. Mark dimensions that don't apply (e.g. theming on a solution with no custom resources) as `not applicable`.
+One row per dimension in **Scope of review (WPF)**, each with a verdict **and a one-line basis**, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean. Mark dimensions that don't apply (e.g. theming on a solution with no custom resources) as `not applicable`.
 
-| Dimension | Verdict |
-|---|---|
-| MVVM separation | clean / <N> findings / not applicable |
-| Data binding strategy | clean / <N> findings |
-| Commands | clean / <N> findings |
-| Threading & dispatcher | clean / <N> findings |
-| View lifecycle / navigation / DI | clean / <N> findings |
-| Resources / styles / theming | clean / <N> findings |
-| Frontend performance | clean / <N> findings |
-| Lifetime & leaks | clean / <N> findings |
-| State management | clean / <N> findings |
+**A `clean` verdict must be earned.** The allowed verdicts are `clean` / `<N> findings` / `not fully assessed` / `not applicable`. Every row carries a **Basis** cell naming what you actually inspected to reach the verdict (e.g. for Threading, that the `.Result` / `.Wait()` / `Dispatcher.Invoke` sweep was run; for Lifetime & leaks, that event-subscription teardown was traced). A dimension you did not inspect deeply enough to defend a `clean` basis MUST be marked **`not fully assessed`**, never `clean`: an unearned green stamp is *worse* than a missing finding, because it suppresses follow-up. If you cannot fill the basis line, you cannot claim `clean`.
+
+| Dimension | Verdict | Basis (what was inspected) |
+|---|---|---|
+| MVVM separation | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Data binding strategy | clean / <N> findings / not fully assessed | <one line> |
+| Commands | clean / <N> findings / not fully assessed | <one line> |
+| Threading & dispatcher | clean / <N> findings / not fully assessed | <one line — incl. UI-thread block sweep> |
+| View lifecycle / navigation / DI | clean / <N> findings / not fully assessed | <one line> |
+| Resources / styles / theming | clean / <N> findings / not fully assessed | <one line> |
+| Frontend performance | clean / <N> findings / not fully assessed | <one line> |
+| Lifetime & leaks | clean / <N> findings / not fully assessed | <one line — incl. teardown/unsubscribe traced> |
+| State management | clean / <N> findings / not fully assessed | <one line> |
 
 ## Findings
 
@@ -335,7 +339,7 @@ If you correct or drop a citation, log it in a final `## Verification log` bulle
 
 This is honest accounting, not weakness. A report with two log corrections beats a report with two silent hallucinations.
 
-**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High — a UI-thread block, an unbounded leak — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+**Considered but not reported is mandatory.** This block is the terminus for every enumerated candidate (see *Enumerate candidates before you filter*) that did not become a `## Findings` entry or a `## Cross-Lens Flags` row. Your `## Verification log` MUST include a `### Considered but not reported` block listing every such candidate, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High — a UI-thread block, an unbounded leak — can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
 
 **Fallback.** When the codebase-memory MCP isn't available, fall back to `Grep` / `Read` for the same checks — slower but identical purpose. Do NOT skip the review.
 

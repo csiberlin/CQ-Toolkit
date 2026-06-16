@@ -289,6 +289,8 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 A review of a good codebase should be short. The job is not to fill a quota; it is to surface only what materially matters. A review that finds the architecture sound and lists zero or two high-value actions is a **better** review than one padded to five. Never invent findings to reach a count.
 
+**Enumerate candidates before you filter (do this first, before the bar).** The value bar decides which candidates become findings — it must never decide which candidates *exist*. Before applying the bar, enumerate every plausible issue you can substantiate against the code: the full candidate set, including the ones you suspect will not survive the bar. Then run each candidate through the bar. Every enumerated candidate MUST terminate in exactly one of three places — a `## Findings` entry, a `## Cross-Lens Flags` row, or a `### Considered but not reported` line in the Verification log. Nothing may evaporate. A candidate that is never written down anywhere is a *silent recall gap* — the single most damaging defect a review can have, because the reader cannot distinguish a deliberate cut from an oversight. If you catch yourself skipping a candidate without recording it, stop and record it.
+
 Every finding and every recommended action MUST clear this three-part bar. If it cannot, cut it — or, if it is a legitimate but minor nicety, move it to `## Optional / stylistic` (see Output) where it cannot masquerade as something that matters.
 
 1. **Counterfactual — name the cost of inaction.** State concretely what breaks, slows, costs, corrupts, or risks if this stays as-is. "It would read more idiomatically", "this is the more modern pattern", and "best practice says X" are NOT costs of inaction. If the only honest justification is taste or idiom with no consequence, the item fails the bar.
@@ -344,30 +346,34 @@ When rendered, summarize the backend architecture posture here; the detailed bac
 
 ## Coverage map
 
-One row per dimension in **Scope of review**, each with a one-word verdict, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
+One row per dimension in **Scope of review**, each with a verdict **and a one-line basis**, so the reader sees what was examined even where nothing was found. This is how the review proves thoroughness now that there is no minimum finding count — do not omit a dimension you checked just because it was clean.
+
+**A `clean` verdict must be earned.** The allowed verdicts are `clean` / `<N> findings` / `not fully assessed` (/ `not applicable` where noted). Every row carries a **Basis** cell naming what you actually inspected to reach the verdict. For `clean`, the basis must cite the concrete surfaces checked — not "looked fine." A dimension you did not inspect deeply enough to defend a `clean` basis MUST be marked **`not fully assessed`**, never `clean`: an unearned green stamp is *worse* than a missing finding, because it tells the reader "checked, nothing here" and actively suppresses follow-up. If you cannot fill the basis line, you cannot claim `clean`.
+
+**Config-driven dimensions require their config surfaces before any `clean`.** Observability, AuthN, AuthZ, Error-handling/Resilience, and the secrets/config posture you own can all be defeated by *deployed configuration* the code wiring does not reveal. Before marking any of these `clean`, you MUST have inspected the governing config — every `appsettings.json` / `appsettings.{Environment}.json` block, environment-variable overrides, and Key Vault / managed-identity references — not just `Program.cs`. (Canonical trap: New Relic agent + `IEventMonitor` + correlation middleware present in code does NOT earn Observability `clean` if a deployed `appsettings.{Env}.json` raises the Serilog/log level and silences the app's own request/audit trace.) If you have not read those surfaces, the verdict is `not fully assessed`, and the gap is itself a candidate to enumerate.
 
 ### Layout coverage
-| Dimension | Verdict |
-|---|---|
-| Project inventory & archetype | clean / <N> findings |
-| Cross-tier dependency direction | clean / <N> findings |
-| Solution structure / shared kernels | clean / <N> findings |
+| Dimension | Verdict | Basis (what was inspected) |
+|---|---|---|
+| Project inventory & archetype | clean / <N> findings / not fully assessed | <one line> |
+| Cross-tier dependency direction | clean / <N> findings / not fully assessed | <one line> |
+| Solution structure / shared kernels | clean / <N> findings / not fully assessed | <one line> |
 
 ### Backend coverage
 (For `desktop-only` / `library-only` archetypes — no backend projects — mark every row `not applicable`.)
-| Dimension | Verdict |
-|---|---|
-| Architecture & layering | clean / <N> findings / not applicable |
-| Data flow | clean / <N> findings / not applicable |
-| Validation | clean / <N> findings / not applicable |
-| AuthN | clean / <N> findings / not applicable |
-| AuthZ | clean / <N> findings / not applicable |
-| Domain logic | clean / <N> findings / not applicable |
-| Simplicity | clean / <N> findings / not applicable |
-| Error-handling strategy | clean / <N> findings / not applicable |
-| Observability | clean / <N> findings / not applicable |
-| Evolvability | clean / <N> findings / not applicable |
-| 50x scalability | clean / <N> findings / not applicable |
+| Dimension | Verdict | Basis (what was inspected) |
+|---|---|---|
+| Architecture & layering | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Data flow | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Validation | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| AuthN | clean / <N> findings / not fully assessed / not applicable | <one line — incl. config surfaces inspected> |
+| AuthZ | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Domain logic | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Simplicity | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| Error-handling strategy | clean / <N> findings / not fully assessed / not applicable | <one line — incl. resilience config inspected> |
+| Observability | clean / <N> findings / not fully assessed / not applicable | <one line — MUST cite the `appsettings.*` log-level/exporter blocks inspected> |
+| Evolvability | clean / <N> findings / not fully assessed / not applicable | <one line> |
+| 50x scalability | clean / <N> findings / not fully assessed / not applicable | <one line> |
 
 ## Findings
 
@@ -480,7 +486,7 @@ If you correct or drop a citation during this pass, log it in a final `## Verifi
 
 This is honest accounting, not weakness. A report with two log corrections beats a report with two silent hallucinations.
 
-**Considered but not reported is mandatory.** Your `## Verification log` MUST include a `### Considered but not reported` block listing every candidate finding you evaluated but did not promote to `## Findings`, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High can never disappear without a trace. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
+**Considered but not reported is mandatory.** This block is the terminus for every enumerated candidate (see *Enumerate candidates before you filter*) that did not become a `## Findings` entry or a `## Cross-Lens Flags` row. Your `## Verification log` MUST include a `### Considered but not reported` block listing every such candidate, each with a one-line reason: `duplicate of #N` / `below the value bar — <why>` / `false positive — <why>` / `merged into #N` / `handed off — see ## Cross-Lens Flags`. This makes coverage and severity decisions visible instead of silent, so a dropped High can never disappear without a trace. If a candidate is neither a finding, nor a flag, nor listed here, that is the silent recall gap this block exists to prevent. Any candidate dropped because it belongs to another lens MUST appear here AND as a row in `## Cross-Lens Flags`. If you cut nothing, write "Considered but not reported: none."
 
 **Fallback.** When the codebase-memory MCP isn't available (graph missing or stale), fall back to `Grep` / `Read` for the same checks — slower but identical purpose. Do NOT skip the review.
 
