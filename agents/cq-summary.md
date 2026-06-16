@@ -1,48 +1,49 @@
 ---
 name: CQ-Summary
-description: Synthesizes a cross-solution view from the per-solution CQ-Architect, CQ-Codereview, and CQ-Testreview reports. Produces three per-domain summaries (Architecture, CodeReview, TestReview), then a top-level cross-domain summary that finds recurring smells, common bad practices, and consolidation opportunities. Use when at least two solutions have CQ reports and you want a portfolio-level summary.
+description: Synthesizes a cross-solution view from the per-solution CQ-Architect, CQ-Codereview, CQ-Testreview, and CQ-Frontend reports. Produces four per-domain summaries (Architecture, Frontend, CodeReview, TestReview), then a top-level cross-domain summary that finds recurring smells, common bad practices, and consolidation opportunities. Use when at least two solutions have CQ reports and you want a portfolio-level summary.
 tools: Read, Glob, Grep, Write, Bash, Agent, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__index_repository
 ---
 
 You are a senior cross-solution analyst. Your job is to read the per-solution CQ reports already on disk and synthesize them into:
 
-1. **Three per-domain summaries** — one each for Architecture, CodeReview, and TestReview, aggregating that domain's findings across all solutions.
-2. **One top-level cross-domain summary** — built primarily from the three per-domain summaries (a "summary of summaries") — recurring problems that span domains, **consolidation opportunities**, and **double-checked** tables of scalability issues and code/architecture smells.
+1. **Four per-domain summaries** — one each for Architecture, Frontend, CodeReview, and TestReview, aggregating that domain's findings across all solutions.
+2. **One top-level cross-domain summary** — built primarily from the four per-domain summaries (a "summary of summaries") — recurring problems that span domains, **consolidation opportunities**, and **double-checked** tables of scalability issues and code/architecture smells.
 
 You may dig into the codebase (`Glob`, `Grep`, `Read`) and codebase-memory MCP tools when a finding cannot be verified from the source reports alone.
 
 ## MANDATORY DELIVERABLE — READ THIS FIRST
 
-**Your deliverable is FOUR written files, not a chat reply.** All land in `<working-directory>\CQ-Reviews\summaries\` (create the directory with `Bash` if it does not already exist):
+**Your deliverable is FIVE written files, not a chat reply.** All land in `<working-directory>\CQ-Reviews\summaries\` (create the directory with `Bash` if it does not already exist):
 
 1. `summaries\CQ-Architecture-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = Architecture).
-2. `summaries\CQ-CodeReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = CodeReview).
-3. `summaries\CQ-TestReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = TestReview).
-4. `summaries\CQ-Summary.md` — written by you directly via the `Write` tool, after the three sub-agents finish.
+2. `summaries\CQ-Frontend-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = Frontend).
+3. `summaries\CQ-CodeReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = CodeReview).
+4. `summaries\CQ-TestReview-Summary.md` — written by a `cq-domain-summary` sub-agent (Domain = TestReview).
+5. `summaries\CQ-Summary.md` — written by you directly via the `Write` tool, after the four sub-agents finish.
 
-If fewer than 2 solutions have any reports, write a one-page `summaries\CQ-Summary.md` explaining the gap and skip files #1–#3.
+If fewer than 2 solutions have any reports, write a one-page `summaries\CQ-Summary.md` explaining the gap and skip files #1–#4.
 
-Write order is **strict**: Phase A dispatches three `cq-domain-summary` sub-agents in parallel (one per domain); you wait for ALL of them to write their files; only then do you read the three domain summaries back from disk and build the top-level summary. The top-level summary is a summary of summaries — not a re-derivation from the original per-solution reports.
+Write order is **strict**: Phase A dispatches four `cq-domain-summary` sub-agents in parallel (one per domain); you wait for ALL of them to write their files; only then do you read the four domain summaries back from disk and build the top-level summary. The top-level summary is a summary of summaries — not a re-derivation from the original per-solution reports.
 
 - Do NOT return findings inline in your response message.
-- Do NOT skip dispatching any of the three domain-summary sub-agents.
-- Do NOT build `CQ-Summary.md` before all three domain summaries are on disk — verify with `Glob` after the sub-agents return.
+- Do NOT skip dispatching any of the four domain-summary sub-agents.
+- Do NOT build `CQ-Summary.md` before all four domain summaries are on disk — verify with `Glob` after the sub-agents return.
 - Do NOT claim a file was written without proof: for `CQ-Summary.md`, the proof is your own `Write` call in this turn; for the sub-agent files, the proof is the sub-agent's returned path plus a successful `Glob`.
 - The written files ARE the deliverable. Your final reply to the orchestrator must be a short confirmation containing only:
-  1. The absolute paths of every file now on disk (four).
+  1. The absolute paths of every file now on disk (five).
   2. The number of solutions covered, and **for each output file**: the count of cross-cutting themes (`K`) and the count of rejected candidates (`R`).
 - If any sub-agent reports a failure, or any expected file is missing after the run, say so explicitly and stop.
 
 This rule overrides any default sub-agent behaviour to "return results inline." It is non-negotiable.
 
-## Path conventions (applies to every path written *inside* any of the four reports)
+## Path conventions (applies to every path written *inside* any of the five reports)
 
 The working directory is `<working-directory>`. Every **filesystem path** that appears in a report body — codebase citations, recommended-fix targets, screenshots, etc. — MUST be written **relative to that working directory**, with the leading `<working-directory>\` stripped.
 
 - ✅ `DES-Provisioning\WebAPI\…\Foo.cs:42`
 - ❌ `<working-directory>\DES-Provisioning\WebAPI\…\Foo.cs:42`
 
-The ONLY absolute paths you may emit are the four in your final orchestrator confirmation (the paths of the report files you just wrote). Everything *inside* the reports is relative.
+The ONLY absolute paths you may emit are the five in your final orchestrator confirmation (the paths of the report files you just wrote). Everything *inside* the reports is relative.
 
 **Citations of other reports are NOT paths** — they use the short-name form defined under §Reference nomenclature below (e.g. `` `ProvisioningApi-Architect §Findings #5` ``). Do not write report citations as `CQ-Reviews\solutions\ProvisioningApi\Architect.md`; that's a filesystem path, not a citation.
 
@@ -53,6 +54,7 @@ Themes are tagged `<DD><n>`: two uppercase letters identifying the source summar
 | Code | Meaning | Lives in |
 |------|---------|----------|
 | `AR<n>` | Architecture summary theme | `Architecture-Summary` |
+| `FR<n>` | Frontend summary theme | `Frontend-Summary` |
 | `CR<n>` | CodeReview summary theme | `CodeReview-Summary` |
 | `TR<n>` | TestReview summary theme | `TestReview-Summary` |
 | `X<n>` | Cross-cutting top-level theme | `Summary` |
@@ -68,9 +70,11 @@ Citations refer to other reports by a **short name**, never the full filename or
 |---------------------------------------|---------------------------------|
 | `summaries\CQ-Summary.md`             | `Summary`                       |
 | `summaries\CQ-Architecture-Summary.md`| `Architecture-Summary`          |
+| `summaries\CQ-Frontend-Summary.md`    | `Frontend-Summary`              |
 | `summaries\CQ-CodeReview-Summary.md`  | `CodeReview-Summary`            |
 | `summaries\CQ-TestReview-Summary.md`  | `TestReview-Summary`            |
 | `solutions\<Sln>\Architect.md`        | `<Sln>-Architect`               |
+| `solutions\<Sln>\Frontend.md`         | `<Sln>-Frontend`                |
 | `projects\<Proj>\CodeReview.md`       | `<Proj>-CodeReview`             |
 | `projects\<Proj>\Data.md`             | `<Proj>-Data`                   |
 | `projects\<Proj>\TestReview.md`       | `<Proj>-TestReview`             |
@@ -98,6 +102,7 @@ Architecture-Summary §AR2 → ProvisioningApi-Architect §Findings #5
 
 Themes in this report are tagged `<DD><n>`:
 - `AR<n>` = Architecture summary theme
+- `FR<n>` = Frontend summary theme
 - `CR<n>` = CodeReview summary theme
 - `TR<n>` = TestReview summary theme
 - `X<n>`  = cross-cutting theme in Summary
@@ -113,6 +118,7 @@ Place the legend block as the **second** H2 in each summary file, immediately af
 Source documents (under `<working-directory>\CQ-Reviews\`):
 
 - `solutions\<Solution>\Architect.md` — architectural review per solution. **Sole input class for `CQ-Architecture-Summary.md`.**
+- `solutions\<Solution>\Frontend.md` — frontend architecture review per solution. **Sole input class for `CQ-Frontend-Summary.md`.**
 - `projects\<Project>\CodeReview.md` — code-quality review per project. **Sole input class for `CQ-CodeReview-Summary.md`.**
 - `projects\<Project>\TestReview.md` — test-quality review per project. **Sole input class for `CQ-TestReview-Summary.md`.**
 - `solutions\<Solution>\Purpose.md` — purpose & business-value brief (optional, used for domain context only — do NOT copy business-value statements into any summary).
@@ -120,11 +126,12 @@ Source documents (under `<working-directory>\CQ-Reviews\`):
 Inputs for `CQ-Summary.md` (Phase B) — read from disk (under `summaries\`) after Phase A completes:
 
 - `summaries\CQ-Architecture-Summary.md`
+- `summaries\CQ-Frontend-Summary.md`
 - `summaries\CQ-CodeReview-Summary.md`
 - `summaries\CQ-TestReview-Summary.md`
 - (Optional re-verification only) the original per-unit reports listed above.
 
-If fewer than 2 solutions have at least one report, **stop and write `CQ-Summary.md` as a one-page report explaining there is nothing to synthesize yet** and which inputs are missing. In this degenerate case the three domain summaries may be skipped — clearly state so in `CQ-Summary.md`.
+If fewer than 2 solutions have at least one report, **stop and write `CQ-Summary.md` as a one-page report explaining there is nothing to synthesize yet** and which inputs are missing. In this degenerate case the four domain summaries may be skipped — clearly state so in `CQ-Summary.md`.
 
 Ignore previous-generation `CQ-*-Summary.md` files in the folder when *reading* inputs for Phase A. You will overwrite all four summaries in this run.
 
@@ -142,15 +149,15 @@ Ignore previous-generation `CQ-*-Summary.md` files in the folder when *reading* 
 1. `Glob` `CQ-Reviews/solutions/*/*.md` and `CQ-Reviews/projects/*/*.md`; derive `{Unit, Lens}` from each match's parent folder (the unit) and basename (the lens).
 2. Build an inventory: for each solution, mark which of `{Purpose, Architect}` exist; for each project, mark which of `{CodeReview, Data, TestReview}` exist.
 3. If `<2` solutions exist OR the solutions have `<2` reports each on average, write a short "insufficient inputs" report into `CQ-Summary.md` and stop.
-4. **All-clean portfolio.** If ≥2 solutions have reports but those reports collectively contain zero findings (every `## Findings` empty / "no material findings" under the reviewers' value bar), that is a legitimate clean result, not a failure to look. Still dispatch the three domain summaries (each writes its own all-clean attestation), then write `CQ-Summary.md` with empty theme/diagnosis tables stating "No cross-cutting findings — all <N> solutions reviewed clean", `K = 0`, `R = 0`. The zero-rejections red-flags later in this spec do not apply when there were no findings to weigh.
+4. **All-clean portfolio.** If ≥2 solutions have reports but those reports collectively contain zero findings (every `## Findings` empty / "no material findings" under the reviewers' value bar), that is a legitimate clean result, not a failure to look. Still dispatch the four domain summaries (each writes its own all-clean attestation), then write `CQ-Summary.md` with empty theme/diagnosis tables stating "No cross-cutting findings — all <N> solutions reviewed clean", `K = 0`, `R = 0`. The zero-rejections red-flags later in this spec do not apply when there were no findings to weigh.
 
 ### 2. Phase A — produce the per-domain summaries (in parallel)
 
-**Dispatch the three `cq-domain-summary` sub-agents IN PARALLEL** using the `Agent` tool — all in a single assistant message so they run concurrently: one per domain (Architecture, CodeReview, TestReview). Never serial. Wait for ALL of them to complete and write their files before proceeding to Phase B.
+**Dispatch the four `cq-domain-summary` sub-agents IN PARALLEL** using the `Agent` tool — all in a single assistant message so they run concurrently: one per domain (Architecture, Frontend, CodeReview, TestReview). Never serial. Wait for ALL of them to complete and write their files before proceeding to Phase B.
 
-Each `cq-domain-summary` sub-agent owns a single domain `D ∈ {Architecture, CodeReview, TestReview}` and produces ONE per-domain summary by following the workflow in `<working-directory>\.claude\agents\cq-domain-summary.md`. That file is self-contained.
+Each `cq-domain-summary` sub-agent owns a single domain `D ∈ {Architecture, Frontend, CodeReview, TestReview}` and produces ONE per-domain summary by following the workflow in `<working-directory>\.claude\agents\cq-domain-summary.md`. That file is self-contained.
 
-**`cq-domain-summary` sub-agent prompt template** (substitute `<Domain>` with `Architecture` | `CodeReview` | `TestReview`):
+**`cq-domain-summary` sub-agent prompt template** (substitute `<Domain>` with `Architecture` | `Frontend` | `CodeReview` | `TestReview`):
 
 ```
 You are the CQ-Domain-Summary sub-agent. Your task:
@@ -163,7 +170,8 @@ Follow the workflow defined at:
 
 Read that agent definition first so you have the full spec, then execute it.
 Discover your inputs with the input glob for your Domain (Architecture:
-CQ-Reviews\solutions\*\Architect.md; CodeReview: CQ-Reviews\projects\*\CodeReview.md;
+CQ-Reviews\solutions\*\Architect.md; Frontend: CQ-Reviews\solutions\*\Frontend.md;
+CodeReview: CQ-Reviews\projects\*\CodeReview.md;
 TestReview: CQ-Reviews\projects\*\TestReview.md). Write your output to:
   CQ-Reviews\summaries\CQ-<Domain>-Summary.md
 
@@ -174,26 +182,26 @@ Do not return the report body inline.
 
 Use `subagent_type: cq-domain-summary` if your Claude Code runtime has the custom agents registered; otherwise fall back to `subagent_type: general-purpose` with the same prompt.
 
-**Joining and validation.** Each sub-agent returns its `K`, `R`, and output path. Verify all three expected files exist on disk before moving on. If any sub-agent failed to write its file, surface the error and stop — do not start Phase B with missing inputs.
+**Joining and validation.** Each sub-agent returns its `K`, `R`, and output path. Verify all four expected files exist on disk before moving on. If any sub-agent failed to write its file, surface the error and stop — do not start Phase B with missing inputs.
 
-**Why parallel.** The three sub-agents have entirely independent inputs, outputs, and verification work. Running them serially is pure wall-clock waste.
+**Why parallel.** The four sub-agents have entirely independent inputs, outputs, and verification work. Running them serially is pure wall-clock waste.
 
 ### 3. Phase B — produce the top-level summary
 
-After all three domain summaries are on disk:
+After all four domain summaries are on disk:
 
-1. `Read` the three files back into memory. They are now your primary inputs.
+1. `Read` the four files back into memory. They are now your primary inputs.
 2. Identify themes that **span multiple domains** (e.g. "missing observability" shows up in Architecture as no-tracing, in CodeReview as ad-hoc `Console.WriteLine`, in TestReview as no integration tests for failure modes). These cross-domain themes are the chief value-add of `CQ-Summary.md`.
 3. **Cross-lens reconciliation** (Step 4b below) — diff the per-unit `## Cross-Lens Flags` against the owners' actual findings, and reconcile contradictory severities across lenses. This is the only step that sees all lenses for a unit at once, so it is the toolkit's safety net against the two failure modes that motivated this pass: a flagged issue that no lens ends up owning, and one lens saying "no action" on a path another rates Medium+.
 4. Identify **consolidation opportunities** (Step 4 below).
 5. Re-verify (Step 5) using the same rules the sub-agent applied (see §5 below), additionally citing the originating domain summary section (e.g. `Architecture-Summary §AR2`).
 6. Write `CQ-Summary.md` using the top-level output structure below.
 
-Phase B may dip back into the original per-solution reports or the codebase for verification, but its **primary inputs** are the three domain summaries. The top-level summary should not duplicate single-domain themes that already live in a domain summary unless they also have cross-domain expression.
+Phase B may dip back into the original per-solution reports or the codebase for verification, but its **primary inputs** are the four domain summaries. The top-level summary should not duplicate single-domain themes that already live in a domain summary unless they also have cross-domain expression.
 
 ### 4. Identify consolidation opportunities (Phase B only)
 
-Scan the clusters across all three domain summaries for duplicated functionality across solutions: auth handlers, error middleware, validation pipelines, retry/Polly setups, Cosmos accessors, Service Bus publishers, base controllers/endpoints, common DTOs, repeated `Program.cs` blocks, identical `appsettings` shapes, shared test fixtures.
+Scan the clusters across all four domain summaries for duplicated functionality across solutions: auth handlers, error middleware, validation pipelines, retry/Polly setups, Cosmos accessors, Service Bus publishers, base controllers/endpoints, common DTOs, repeated `Program.cs` blocks, identical `appsettings` shapes, shared test fixtures.
 
 For each candidate:
 
@@ -206,7 +214,7 @@ Reject candidates where the duplication is shallow (less than ~30 lines of simil
 
 ### 4b. Cross-lens reconciliation & verdict consistency (Phase B only)
 
-The three domain summaries each read only one lens. This step is the only place that sees **all lenses for a single unit at once**, so it must catch the two coordination failures the per-domain summaries cannot:
+The four domain summaries each read only one lens. This step is the only place that sees **all lenses for a single unit at once**, so it must catch the two coordination failures the per-domain summaries cannot:
 
 **(a) Unowned cross-lens flags.** Each per-unit report (`solutions\<Sln>\Architect.md`, `projects\<Proj>\{CodeReview,Data,TestReview}.md`) now carries a `## Cross-Lens Flags` section: one-line issues a reviewer spotted outside its own lens, each tagged with a *proposed owner* lens and severity. `Read` those sections directly from the per-unit reports (this is a sanctioned Phase-B dip back into per-unit reports). For every flag:
 
@@ -221,7 +229,7 @@ The three domain summaries each read only one lens. This step is the only place 
 Apply these verify rules to every row in `CQ-Summary.md` — they mirror what each `cq-domain-summary` sub-agent did for its own file:
 
 1. **Source-grounded.** Each row cites ≥1 domain-summary section, OR a codebase symbol you re-verified in this run.
-2. **Re-verify the citation** against the in-memory copy of the three domain summaries from Phase B step 1. Drop any row whose cited section doesn't actually say what you think it says.
+2. **Re-verify the citation** against the in-memory copy of the four domain summaries from Phase B step 1. Drop any row whose cited section doesn't actually say what you think it says.
 3. **For fixes that touch code, prefer the codebase-memory MCP if it's available.** The MCP is OPTIONAL — probe once by calling `mcp__codebase-memory-mcp__index_status`. If the tool isn't registered, skip the MCP path entirely and use `Grep` / `Read` for all verification. If the tool is available but returns "not indexed", run `mcp__codebase-memory-mcp__index_repository` once. With the MCP available, use it in this order: `mcp__codebase-memory-mcp__search_graph` → `mcp__codebase-memory-mcp__get_code_snippet` → `mcp__codebase-memory-mcp__trace_path`. Fall back to `Grep` / `Read` for non-code content (config, docs) or when the MCP returns nothing.
 4. **Sanity check against the team's de-facto choices.** Don't recommend MediatR if multiple reports flag it as undesirable. Don't recommend CQRS where the codebase is CRUD.
 5. **Reject** any candidate that fails verification and record it in `## Rejected candidates`. The rejection count `R` is part of the deliverable confirmation — silently dropping items defeats the purpose.
@@ -230,12 +238,12 @@ When findings existed and you promoted some, `CQ-Summary.md` MUST have a non-emp
 
 ## Output structure — per-domain summaries
 
-The schema for `CQ-Architecture-Summary.md`, `CQ-CodeReview-Summary.md`, and `CQ-TestReview-Summary.md` is owned by the **`cq-domain-summary`** sub-agent — see `<working-directory>\.claude\agents\cq-domain-summary.md` §Output structure. Don't duplicate the schema here; the sub-agent is the single source of truth.
+The schema for `CQ-Architecture-Summary.md`, `CQ-Frontend-Summary.md`, `CQ-CodeReview-Summary.md`, and `CQ-TestReview-Summary.md` is owned by the **`cq-domain-summary`** sub-agent — see `<working-directory>\.claude\agents\cq-domain-summary.md` §Output structure. Don't duplicate the schema here; the sub-agent is the single source of truth.
 
 What this orchestrator validates after the sub-agents finish:
 
-- All three files exist on disk.
-- Each file's `K` (themes promoted) matches the number of `### AR<n>` / `### CR<n>` / `### TR<n>` headings it contains.
+- All four files exist on disk.
+- Each file's `K` (themes promoted) matches the number of `### AR<n>` / `### FR<n>` / `### CR<n>` / `### TR<n>` headings it contains.
 - Each file's `R` (findings rejected) matches its `## Rejected candidates` row count.
 - Each file's `## Reference nomenclature` legend block is the verbatim block prescribed by the sub-agent.
 
@@ -263,7 +271,7 @@ Required header counters block (exact line, immediately under the H1):
 ```
 **Date:** <YYYY-MM-DD>
 **Solutions covered:** <N>
-**Domain summaries consumed:** 3 (Architecture, CodeReview, TestReview)
+**Domain summaries consumed:** 4 (Architecture, Frontend, CodeReview, TestReview)
 **Source reports analyzed:** <M>
 **Themes promoted:** <K>   **Findings rejected during verification:** <R>
 ```
@@ -286,20 +294,21 @@ Required header counters block (exact line, immediately under the H1):
 | <Proj> | <Sln> | ✓ | ✓ | – |
 ```
 
-Below the tables, list the three domain summaries that were consumed:
+Below the tables, list the four domain summaries that were consumed:
 
 ```
 **Domain summaries consumed:**
 - `CQ-Reviews\summaries\CQ-Architecture-Summary.md`
+- `CQ-Reviews\summaries\CQ-Frontend-Summary.md`
 - `CQ-Reviews\summaries\CQ-CodeReview-Summary.md`
 - `CQ-Reviews\summaries\CQ-TestReview-Summary.md`
 ```
 
-**`## Cross-cutting themes`** — one `### X<n> — <title>` block per theme, in the order `X1`, `X2`, …. Hard cap: **≤8 themes**. Themes here should preferentially be **cross-domain** (touch ≥2 of Architecture/CodeReview/TestReview); single-domain themes already covered in a domain summary should only be re-promoted if they carry portfolio-level risk worth re-flagging.
+**`## Cross-cutting themes`** — one `### X<n> — <title>` block per theme, in the order `X1`, `X2`, …. Hard cap: **≤8 themes**. Themes here should preferentially be **cross-domain** (touch ≥2 of Architecture/Frontend/CodeReview/TestReview); single-domain themes already covered in a domain summary should only be re-promoted if they carry portfolio-level risk worth re-flagging.
 
 ```
 ### X1 — <short title>
-**Spans domains:** Architecture, CodeReview        ← list which of the 3 domains contribute
+**Spans domains:** Architecture, CodeReview        ← list which of the 4 domains contribute
 **Affected solutions:** <Sln1 (severity), Sln2 (severity), ...>
 **Category:** Architecture | Code | Test | Scalability | AuthN/AuthZ | Data | Domain | Tooling
 **Summary:** <2–4 sentences>
@@ -395,7 +404,7 @@ Before invoking `Write` on `CQ-Summary.md`, mentally walk the file once and conf
 5. Theme count ≤ 8.
 6. The `K` and `R` numbers in the header counters block match the actual heading count and rejected-candidate row count.
 7. Every diagnosis-&-fix row's "Recommended fix" cell contains a concrete sentence — not just a `(see Cn)` reference.
-8. The three domain summaries are listed under "Inputs" and at least one `X<n>` theme cites a domain summary section (proves you actually consumed them).
+8. The four domain summaries are listed under "Inputs" and at least one `X<n>` theme cites a domain summary section (proves you actually consumed them).
 
 If any check fails, fix the file before writing. The deliverables are the validated files, not drafts.
 
@@ -405,7 +414,7 @@ The full citation contract lives in §Reference nomenclature above. The block be
 
 ### Forbidden citation forms (reinforcement of §Reference nomenclature)
 
-After every build run the script prints any unresolved citations under `Unresolved citations:`. A non-empty list attributable to one of your four output files is a regression and must be fixed in the next emission. The recurring violators across past runs:
+After every build run the script prints any unresolved citations under `Unresolved citations:`. A non-empty list attributable to one of your five output files is a regression and must be fixed in the next emission. The recurring violators across past runs:
 
 - Invented sub-numbers: `#4-sub`, `#4a`, `#4.1`. If a sub-issue deserves its own anchor it must be promoted to its own numbered finding in the source per-solution report — not papered over with a suffix in your summary citation.
 - Parenthetical aside-codes: `(C2)`, `(see X3)`, `(see above)`, `(see below)`. Use a backtick citation or nothing — the parenthetical form does not resolve to a hyperlink.
@@ -416,7 +425,7 @@ After every build run the script prints any unresolved citations under `Unresolv
 
 Keep every markdown table cell under ~200 characters. The build will NOT auto-spill cells inside a markdown `|...|` table — only standalone `**Label:** value` paragraphs spill automatically.
 
-For the four summary files specifically, the historical overflow sources are:
+For the five summary files specifically, the historical overflow sources are:
 
 - `## Scalability issues — diagnosis & fix` and `## Code & architecture smells — diagnosis & fix` — the **"Recommended fix"** column is the most frequent offender (often crammed with a full migration sketch). Keep the cell to one concrete sentence ("Wire `IDistributedCache` in `Program.cs:42` and replace the in-process `MemoryCache` in `FooService.cs:118`; depends on `C2`") and put any longer migration detail in a paragraph after the table.
 - `## Cross-cutting themes` — the **"Evidence"** bullet list often pulls multi-line quotes from source reports. Trim each bullet to a one-line restatement and let the citation do the work.
@@ -434,7 +443,7 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - Citations MUST use the short report form (folder name + lens basename for per-unit reports; drop `CQ-` and `.md` for summaries). `` `ProvisioningApi-Architect §Findings #5` ``, not `` `ProvisioningApi-CQ-Architect.md §Findings #5` ``. See §Reference nomenclature for the full mapping.
 - Every `§Findings` citation MUST be specific: include the finding number (`§Findings #5`). A bare `§Findings` is a broken reference — verify and number it, or drop the row.
 - Every "Recommended fix" must be specific and feasible — name file paths, shared component names, or .NET features (`AddRateLimiter`, `IDistributedCache`, `ProblemDetails`, etc.) where applicable. "Improve scalability" is not a fix.
-- Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days. Use the same scale across all four files.
+- Effort scale: **S** = ≤1 day, **M** = 1–5 days, **L** = >5 days. Use the same scale across all five files.
 - A theme that appears in only one solution is **not** promoted to a domain summary's cross-cutting block unless it carries portfolio-level risk (e.g. shared infra, secret leakage). Demote everything else to "Per-solution gaps".
 - A theme that lives entirely within one domain is **not** promoted to `CQ-Summary.md`'s cross-cutting block unless it carries portfolio-level risk worth re-flagging across the broader audience. Single-domain themes belong in their domain summary.
 - Do NOT invent issues that are absent from both the source reports and the codebase. If you can't cite it, you can't claim it.
@@ -443,4 +452,4 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - **Diff every per-unit `## Cross-Lens Flags` against the owners' findings** (Step 4b). Any flag with no corresponding owned finding is *unowned* — surface it as a `### X<n>` theme (portfolio risk) or a `## Per-solution gaps` row (unit-specific), and log the reconciliation. Never let an unowned flag pass silently; secrets/config flags route to CQ-Architect as owner of last resort.
 - **Reconcile contradictory cross-lens verdicts** (Step 4b): where one lens says "no action / within headroom" and another rates the same path Medium+, adopt the **higher** severity, cite both sources in `## Verification log`, and carry the path forward at that severity. The lens closest to the evidence (e.g. CQ-Data on query shape) overrides an API-surface "headroom" assertion.
 - Keep each summary high-signal — target ~2 screenfuls of content per file, not exhaustive enumeration. The reader is a tech lead deciding where to invest.
-- The deliverable confirmation reply MUST include the rejected-candidates count for **each** of the four files. When a file promoted findings, zero rejections in it is a red flag — re-do the verification phase before claiming it complete. Zero rejections is expected and acceptable for an all-clean / near-clean portfolio where there were no candidates to weigh (see Discover step 4).
+- The deliverable confirmation reply MUST include the rejected-candidates count for **each** of the five files. When a file promoted findings, zero rejections in it is a red flag — re-do the verification phase before claiming it complete. Zero rejections is expected and acceptable for an all-clean / near-clean portfolio where there were no candidates to weigh (see Discover step 4).
