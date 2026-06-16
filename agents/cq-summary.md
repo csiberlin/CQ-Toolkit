@@ -147,7 +147,7 @@ Ignore previous-generation `CQ-*-Summary.md` files in the folder when *reading* 
 ### 1. Discover
 
 1. `Glob` `CQ-Reviews/solutions/*/*.md` and `CQ-Reviews/projects/*/*.md`; derive `{Unit, Lens}` from each match's parent folder (the unit) and basename (the lens).
-2. Build an inventory: for each solution, mark which of `{Purpose, Architect}` exist; for each project, mark which of `{CodeReview, Data, TestReview}` exist.
+2. Build an inventory: for each solution, mark which of `{Purpose, Architect, Frontend}` exist; for each project, mark which of `{CodeReview, Data, TestReview}` exist.
 3. If `<2` solutions exist OR the solutions have `<2` reports each on average, write a short "insufficient inputs" report into `CQ-Summary.md` and stop.
 4. **All-clean portfolio.** If ≥2 solutions have reports but those reports collectively contain zero findings (every `## Findings` empty / "no material findings" under the reviewers' value bar), that is a legitimate clean result, not a failure to look. Still dispatch the four domain summaries (each writes its own all-clean attestation), then write `CQ-Summary.md` with empty theme/diagnosis tables stating "No cross-cutting findings — all <N> solutions reviewed clean", `K = 0`, `R = 0`. The zero-rejections red-flags later in this spec do not apply when there were no findings to weigh.
 
@@ -216,7 +216,7 @@ Reject candidates where the duplication is shallow (less than ~30 lines of simil
 
 The four domain summaries each read only one lens. This step is the only place that sees **all lenses for a single unit at once**, so it must catch the two coordination failures the per-domain summaries cannot:
 
-**(a) Unowned cross-lens flags.** Each per-unit report (`solutions\<Sln>\Architect.md`, `projects\<Proj>\{CodeReview,Data,TestReview}.md`) now carries a `## Cross-Lens Flags` section: one-line issues a reviewer spotted outside its own lens, each tagged with a *proposed owner* lens and severity. `Read` those sections directly from the per-unit reports (this is a sanctioned Phase-B dip back into per-unit reports). For every flag:
+**(a) Unowned cross-lens flags.** Each per-unit report (`solutions\<Sln>\Architect.md`, `solutions\<Sln>\Frontend.md`, `projects\<Proj>\{CodeReview,Data,TestReview}.md`) now carries a `## Cross-Lens Flags` section: one-line issues a reviewer spotted outside its own lens, each tagged with a *proposed owner* lens and severity. `Read` those sections directly from the per-unit reports (this is a sanctioned Phase-B dip back into per-unit reports). For every flag:
 
 1. Look in the proposed owner's report for the **same unit** (Architect flags route to that solution's other-project reports or to Architect itself; secrets/config/credential-fallback always route to **CQ-Architect**, the declared owner of last resort).
 2. If the owner filed a corresponding owned finding, the flag is resolved — nothing to do.
