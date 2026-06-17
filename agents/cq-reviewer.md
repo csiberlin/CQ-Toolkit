@@ -230,7 +230,7 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 ## How to investigate
 
-1. Confirm the target project (the orchestrator named it). Read its `.csproj`; it is a production project (test projects are CQ-Test-Reviewer's). A **shared test-utility / fixture library** — referenced by test projects but with no `Microsoft.NET.Test.Sdk` / test-adapter / `<IsTestProject>` marker and no test-attributed class — is legitimately **yours**: `/cq-scan` classifies it production (test-support code), so review it as normal production code rather than bouncing it for "looking like a test project." You may Glob sibling `*.csproj` in the same solution only to resolve cross-project references for context.
+1. Confirm the target project (the orchestrator named it). Read its `.csproj`; it is a production project (test projects are CQ-Test-Reviewer's). A **shared test-utility / fixture library** — referenced by test projects but with no `Microsoft.NET.Test.Sdk` / test-adapter / `<IsTestProject>` marker and no test-attributed class — is legitimately **yours**: `/cq-analyze` classifies it production (test-support code), so review it as normal production code rather than bouncing it for "looking like a test project." You may Glob sibling `*.csproj` in the same solution only to resolve cross-project references for context.
 2. Read `Program.cs` and any `*Endpoints.cs` / endpoint extension files to assess Minimal API usage.
 3. Sample classes across folders; do not read every file - target representative samples plus any class that looks unusually large via Bash `wc -l`.
 4. Grep for telltale patterns: `app.Map`, `Results.`, `TypedResults.`, `IRepository`, `MediatR`, `record `, `class `.

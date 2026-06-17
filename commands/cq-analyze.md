@@ -1,17 +1,21 @@
 ---
-description: Scan all C# solutions in the given subdirectories (or current dir), then dispatch CQ-Architect (solution-layout + backend) per solution, CQ-Frontend-Architect per solution that has a WPF (Frontend) project, CQ-Reviewer (+ CQ-Data where a data layer exists) per production project, and CQ-Test-Reviewer per test project.
+description: Analyze all C# solutions in the given subdirectories (or current dir) — dispatch CQ-Architect (solution-layout + backend) per solution, CQ-Frontend-Architect per solution that has a WPF (Frontend) project, CQ-Reviewer (+ CQ-Data where a data layer exists) per production project, and CQ-Test-Reviewer per test project. Produces the per-unit analysis files only (no summaries or plans).
 argument-hint: [subdir1 subdir2 ...]
 ---
 
-# /cq-scan — bulk CQ review across all C# projects
+# /cq-analyze — bulk CQ review across all C# projects
 
-You are about to launch CQ review agents over every C# project in every C# solution found under the given subdirectories.
+You are about to launch CQ review agents over every C# project in every C# solution found under the given subdirectories. This is **stage 2** of the workflow (`/cq-purpose` → **`/cq-analyze`** → `/cq-summary` → `/cq-plan`); it writes the per-unit analysis files and nothing else.
 
 ## Arguments
 
 `$ARGUMENTS` — optional space-separated list of subdirectories to scan. If empty, scan the **current working directory** recursively.
 
 ## Steps
+
+### 0. Check the purpose baseline (warn, don't block)
+
+The review agents calibrate severity against each solution's `CQ-Reviews\solutions\<Solution-Name>\Purpose.md` (its `## Scale signals` table is `CQ-Architect`'s highest-priority input). Before dispatching, `Glob CQ-Reviews/solutions/*/Purpose.md`. If a solution you are about to analyze has **no** purpose file, warn the user once that its reviews will run **un-calibrated** and that running `/cq-purpose` first (then filling each `## Scale signals` table) gives sharper, scale-anchored findings. This is a **warning only** — proceed with the analysis regardless; the agents already degrade gracefully and note "No CQ-Purpose report found."
 
 ### 1. Discover solutions and projects
 
@@ -78,7 +82,7 @@ After every batch returns, collect the report paths each agent emitted and prese
 
 Also surface the solution-wide **coverage gap**: list any production project that has **no** corresponding test project — this per-project review can't see that, so report it here. **Exclude test-support libraries** — projects classified production by §2 only because they fall outside the test signals, yet reference a test framework (shared fixtures / builders / helpers consumed by the real test projects). They are not expected to own a test project, so do not flag them as gaps; label them `test-support library` instead.
 
-Mark every `TaskCreate` task as `completed` as its agent returns. Do not run `CQ-Summary` automatically — the user can invoke that separately when all per-project reports are in place.
+Mark every `TaskCreate` task as `completed` as its agent returns. Do not run `CQ-Summary` automatically — once all per-unit reports are in place the user runs `/cq-summary` (cross-solution summaries), then `/cq-management-summary` (exec briefs) and/or `/cq-plan` (implementation plans), as needed.
 
 ## Constraints
 

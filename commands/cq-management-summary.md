@@ -7,11 +7,11 @@ argument-hint: [working-subdir]
 
 Regroups the cross-solution CQ summaries into six tight, decision-ready briefs — **Scalability, Readability, Maintainability, Security, Reliability, Test Quality** — for a tech lead deciding what to fund next. Each brief has a Goal, a "Risk if you do nothing" section, and a ranked Actions list.
 
-This is a **separate workflow** from `/cq-plan`. `/cq-plan` produces implementation plans; this command produces management briefs from the summaries `/cq-plan` (or a standalone `CQ-Summary` run) already wrote. Run it *after* the summaries exist — it never regenerates them.
+This is **stage 3b** of the workflow and a sibling of `/cq-plan`: both consume the cross-solution summaries that `/cq-summary` writes. This command produces executive briefs by quality attribute; `/cq-plan` produces implementation plans. Run it *after* the summaries exist — it never regenerates them.
 
 ## Preconditions
 
-- The cross-solution summaries must already exist under `<working-directory>\CQ-Reviews\summaries\`, produced by the `CQ-Summary` agent (e.g. during `/cq-plan` Step 4). If they are missing, run `/cq-plan` first.
+- The cross-solution summaries must already exist under `<working-directory>\CQ-Reviews\summaries\`, produced by `/cq-summary` (the `CQ-Summary` agent). If they are missing, run `/cq-summary` first (or `/cq-all` to run the whole pipeline).
 - Read-only except for the six brief files the agent writes into `summaries\`. No production source files are modified.
 
 ## Steps
@@ -20,7 +20,7 @@ This is a **separate workflow** from `/cq-plan`. `/cq-plan` produces implementat
 
 2. **Locate the input summaries.** `Glob` `CQ-Reviews/summaries/*.md` and identify the four cross-solution summaries. **Two naming conventions are in circulation — accept either:**
 
-   | Domain | Default name (standalone `CQ-Summary`) | `/cq-plan` override name |
+   | Domain | Default name (standalone `CQ-Summary`) | `/cq-summary` (& `/cq-all`) name |
    |---|---|---|
    | Architecture | `CQ-Architecture-Summary.md` | `CQ-Summary-Architecture.md` |
    | CodeReview | `CQ-CodeReview-Summary.md` | `CQ-Summary-CodeReview.md` |
@@ -39,6 +39,6 @@ This is a **separate workflow** from `/cq-plan`. `/cq-plan` produces implementat
 
 ## Constraints
 
-- Consumes existing summaries only — never re-run `/cq-scan` or regenerate the summaries from this command.
-- Do not invoke this inside `/cq-plan`; it is a deliberately separate workflow.
+- Consumes existing summaries only — never re-run `/cq-analyze` or regenerate the summaries from this command.
+- Do not invoke this inside `/cq-all`; it is a deliberately separate workflow the user runs after the pipeline.
 - The six briefs are the deliverable. Your final reply is a short confirmation (the six paths + per-file action counts), not the brief bodies inline.
