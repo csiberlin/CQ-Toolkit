@@ -277,7 +277,7 @@ One row per dimension in **Scope of review**, each with a verdict **and a one-li
 - **If coverage was sampled, say so in the verdict — never a bare `clean` over the unsampled remainder.** Use `partial — sampled <N> of <M>` and name the skipped slice in the Basis (e.g. `sampled 12 of 31 fixtures; firmware-analyzer and culture-pinning fixtures not read`). A bare `clean` asserts the *whole* dimension is fine; only claim it when the whole dimension was inspected.
 - A dimension you did not inspect deeply enough to defend a `clean` (or an honest `partial`) basis MUST be marked **`not fully assessed`**, never `clean`: an unearned green stamp is *worse* than a missing finding, because it tells the reader "checked, nothing here" and actively suppresses follow-up. If you cannot fill the basis line, you cannot claim `clean`.
 
-> *The same `clean`-means-inspected discipline applies to the coverage maps in CQ-Architect, CQ-Reviewer, and CQ-Data — each agent inlines its own coverage-map spec rather than sharing a template, so this hardening is worth applying there too when those agents are next edited.*
+> *The same `clean`-means-inspected discipline is mirrored in the coverage maps of CQ-Architect, CQ-Reviewer, and CQ-Data (each inlines its own coverage-map spec — there is no shared template, so keep the four in sync when editing any one of them).*
 
 | Dimension | Verdict | Basis (what was inspected) |
 |---|---|---|
