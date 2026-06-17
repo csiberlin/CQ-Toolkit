@@ -195,7 +195,7 @@ The same code earns different verdicts: an in-process `MemoryCache` in a back-of
 
 ### Load-independent vs load-dependent severity
 
-The unknown-baseline de-rate above applies ONLY to *throughput / scalability* findings — issues that get worse with more load. **Correctness, data-integrity, audit-trail, and security findings are scored independent of the load baseline.** A lost update, an unbounded full-table read, a missing concurrency guard, a dropped audit record, or a committed default secret is wrong at one user and wrong at 50× users. Never use "baseline unknown → rate Medium" to suppress one of these — that caution is for throughput only. Load-independent findings are floor-Medium and usually High regardless of current load; do not let scalability caution bleed into them.
+The unknown-baseline de-rate above applies ONLY to *throughput / scalability* findings — issues that get worse with more load. **Correctness, data-integrity, audit-trail, and security findings are scored independent of the load baseline.** A lost update, an unbounded full-table read, a missing concurrency guard, a dropped audit record, or a committed default secret is wrong at one user and wrong at 50× users. Never use "baseline unknown → rate Medium" to suppress one of these — that caution is for throughput only. Load-independent findings are floor-Medium and usually High regardless of current load; do not let scalability caution bleed into them. **As owner-of-last-resort for security, apply the PII default: personal data or regulated-domain identifiers written to logs, telemetry, or any external sink are `High` by default (Medium only with masking/justification already in place) — never lowered by current traffic.** Guaranteed-platform faults also count as load-independent: a missing transient-fault retry on a platform where those faults are *certain* (e.g. Azure SQL failover / throttling / idle reset) hits the hot path regardless of request volume — score it on certainty-of-fault, not on current load.
 
 ### Validation layering
 - Input validation (shape, format) → at the boundary (DTO + FluentValidation).
@@ -343,6 +343,7 @@ When rendered, summarize the backend architecture posture here; the detailed bac
 - **Assumed baseline:** <X req/s · N users · M rows> (source: Purpose.md figure | inferred: <archetype> | unknown) — multiplier used: <50x | Purpose-report growth factor>
 - **Simplicity:** Appropriate | Over-engineered | Under-engineered - <one sentence why>
 - **50x readiness:** Ready | Needs work | Will not survive - <one sentence stating the absolute 50x target and the first threshold it does or does not cross, e.g. "Ready - 50x lands at ~100 req/s, well inside single-instance limits">
+- **Diligence:** <N> findings · <M> of <total> dimensions inspected-and-clean (counts from the Coverage map) — so a low finding count reads as *calibrated*, not *shallow*.
 
 ## Coverage map
 
@@ -376,6 +377,8 @@ One row per dimension in **Scope of review**, each with a verdict **and a one-li
 | 50x scalability | clean / <N> findings / not fully assessed / not applicable | <one line> |
 
 ## Findings
+
+> *Open this section with a one-line pointer whenever any candidate was de-escalated to the Watch-list by scale calibration: "N best-practice gap(s) were de-escalated to the Watch-list by scale calibration — see `## Future Considerations / Watch-list`." This is the lens that de-escalates the most (rate limiting, resilience/retry pipeline, OpenTelemetry/tracing, API sunset policy, liveness/readiness split), so a reader who skims only Findings must still be routed to every named gap. Each de-escalated gap MUST appear as its own named Watch-list entry with an explicit trigger — never merely as prose inside the Scalability Stress table. Omit the pointer only when nothing was de-escalated.*
 
 ### 1. <Issue title>
 **Category:** Layering | Data flow | Validation | AuthN | AuthZ | Domain logic | Simplicity | Error-handling strategy | Observability | Evolvability | Scalability

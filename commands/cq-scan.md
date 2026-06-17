@@ -28,12 +28,14 @@ You are about to launch CQ review agents over every C# project in every C# solut
 
 ### 2. Classify each project
 
-For each `.csproj` decide **test** vs **production**:
+For each `.csproj` decide **test** vs **production**. Classify the way Visual Studio / `dotnet test` does — by a test signal *inside the project*, never by its name alone.
 
-- **Test project** if ANY of these is true:
-  - File name matches (case-insensitive) `*.Tests.csproj`, `*.Test.csproj`, `*Tests.csproj`, `*.UnitTests.csproj`, `*.IntegrationTests.csproj`.
-  - The `.csproj` content contains `<IsTestProject>true</IsTestProject>` or a `PackageReference` to any of: `Microsoft.NET.Test.Sdk`, `xunit`, `NUnit`, `MSTest.TestFramework`.
-- Otherwise → **production**.
+- **Test project** if EITHER:
+  1. **The `.csproj` carries the MSBuild/VS test signal** — `<IsTestProject>true</IsTestProject>`, OR a `PackageReference` to `Microsoft.NET.Test.Sdk`, OR a `PackageReference` to a test **adapter** (`xunit.runner.visualstudio`, `NUnit3TestAdapter`, `MSTest.TestAdapter`). These are what make a project runnable in Test Explorer. An explicit `<IsTestProject>false</IsTestProject>` forces **production** even when a test package is present — VS honours the explicit flag.
+  2. **OR at least one class in the project carries a test attribute** of the referenced framework. `Grep` the project's `.cs` files for `[Fact]` / `[Theory]` (xUnit), `[Test]` / `[TestCase]` / `[TestFixture]` (NUnit), or `[TestMethod]` / `[TestClass]` (MSTest). One real hit is enough.
+- **Otherwise → production.** This INCLUDES a **shared test-utility / fixture library** that other test projects reference (base classes, builders, object-mothers, helper/assertion classes) but that has no `Microsoft.NET.Test.Sdk` / adapter / `<IsTestProject>` marker and no test-attributed class of its own. Such a library is *test-support code*, not a test project — it is reviewed by `CQ-Reviewer` (and `CQ-Data` if it touches a data layer), not by `CQ-Test-Reviewer`.
+
+A **bare** `PackageReference` to `xunit` / `NUnit` / `MSTest.TestFramework` is **not**, on its own, a test signal — a shared fixture library references the framework only to expose base classes and assertions to the real test projects. It is a test project only when signal (1) or (2) above also holds. The file name (`*.Tests.csproj`, `*Tests.csproj`, `*.IntegrationTests.csproj`, …) is a **hint only**: a test-y name with none of the signals above is still **production** — note it in the report if it looks like a misnamed test-support library.
 
 For each **production** `.csproj`, also assign a **tier** (read the `.csproj` once — reuse the read from the test/production check):
 
@@ -74,7 +76,7 @@ After every batch returns, collect the report paths each agent emitted and prese
 | Unit (solution / project) | Kind | Report |
 |---------------------------|------|--------|
 
-Also surface the solution-wide **coverage gap**: list any production project that has **no** corresponding test project — this per-project review can't see that, so report it here.
+Also surface the solution-wide **coverage gap**: list any production project that has **no** corresponding test project — this per-project review can't see that, so report it here. **Exclude test-support libraries** — projects classified production by §2 only because they fall outside the test signals, yet reference a test framework (shared fixtures / builders / helpers consumed by the real test projects). They are not expected to own a test project, so do not flag them as gaps; label them `test-support library` instead.
 
 Mark every `TaskCreate` task as `completed` as its agent returns. Do not run `CQ-Summary` automatically — the user can invoke that separately when all per-project reports are in place.
 

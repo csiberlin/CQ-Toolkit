@@ -364,6 +364,7 @@ Report structure (use this exactly):
 - **Schema health:** Good | Acceptable | Risky — <one sentence why>
 - **Data-access discipline:** Good | Acceptable | Risky — <one sentence why, naming the ORM in play>
 - **Migration safety:** Good | Acceptable | Risky — <one sentence why>
+- **Diligence:** <N> findings · <M> of <total> dimensions inspected-and-clean (counts from the Coverage map) — so a low finding count reads as *calibrated*, not *shallow*.
 
 ## Coverage map
 
@@ -383,6 +384,8 @@ One row per dimension in **Scope of review**, each with a verdict **and a one-li
 | Repository / data-access organization | clean / <N> findings / not fully assessed | <one line> |
 
 ## Findings
+
+> *Open this section with a one-line pointer whenever any candidate was de-escalated to the Watch-list by scale calibration: "N best-practice gap(s) were de-escalated to the Watch-list by scale calibration — see `## Future Considerations / Watch-list`." This stops a reader who skims only Findings from missing a real, named gap. Every de-escalated item MUST appear as its own named Watch-list entry, never buried in prose. Omit the pointer only when nothing was de-escalated.*
 
 ### 1. <Issue title>
 **Category:** Schema | Indexes | Constraints | Migration safety | ORM mechanics (EF) | ORM mechanics (Dapper) | ORM mechanics (NHibernate) | ORM mechanics (ADO) | Query pattern | Raw SQL / stored proc | Transactions | Isolation | Connection / resilience | Repository / organization | Stack recommendation
@@ -598,6 +601,7 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - Findings and recommendations must clear the value bar (see *The value bar — every finding and recommendation must clear it*); there is **no minimum count**, and zero high-value findings is a valid outcome. Prove diligence with the **Coverage map**, not with a finding count. Each finding states its `**Cost of inaction:**`. Below-the-bar niceties go in `## Optional / stylistic`, never in Recommended Actions.
 - Do not duplicate findings already owned by CQ-Architect (sharding strategy, read/write split *decision*, "should this be relational at all", pagination at the API surface) or CQ-Reviewer (non-data code patterns, logging, naming, Minimal API).
 - **Floor the severity of load-independent correctness findings.** Unbounded full-table reads on append-only / volume tables, missing optimistic concurrency on a stateful control plane, and read-only queries wrapped in a write transaction are correctness / data-integrity issues — score them floor-Medium and usually High regardless of current row counts or load, and never omit or demote them on small-current-volume grounds (see *Severity is load-independent for correctness findings*). Only schema/throughput findings get the unknown-baseline de-rate.
+- **Do not merge two findings that have different fixes into one finding.** When two data issues share a code location but have distinct root causes and distinct remedies, report them separately (or as clearly enumerated sub-points), even if it raises the count — the merge test is "same fix", not "same file". Concretely: a missing `CommandTimeout` and a missing `EnableRetryOnFailure` on the same `DbContext` are **separate findings** (one bounds a single call, the other adds a transient-fault retry pipeline); a read-only query needlessly wrapped in a write transaction is its **own** finding (tighten the transaction scope), not a footnote on the retry/timeout item.
 - **Record material out-of-lens issues in `## Cross-Lens Flags`**, never demote them to `## Optional / stylistic` on ownership grounds; route secrets/config to CQ-Architect. List every dropped candidate in the `### Considered but not reported` block of the Verification log.
 - **Forward-looking improvements go in `## Future Considerations / Watch-list` with an explicit trigger and no severity label** — never as inflated Findings, and never by demoting a current, load-bearing defect to dodge its rating (if it costs anything at today's volume, it is a Finding; correctness/data-integrity findings are always Findings). Keep it distinct from `## Optional / stylistic`: that section is zero-cost cleanups, this one is real below-threshold improvements.
 - Where you cannot inspect runtime behaviour (actual query plans, real row counts), say so and reason from schema + code structure.

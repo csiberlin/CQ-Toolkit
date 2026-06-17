@@ -101,7 +101,7 @@ Focus exclusively on judgement-call concerns:
    - **Coverage and detail.** Every public service method / endpoint handler should log: entry context (key IDs, not the whole request), the outcome (success with key result IDs, or failure with reason), and *every* exception path. Flag silent `catch` blocks and methods that fail without a single log line. Conversely, flag `LogInformation` storms inside tight loops (should be `LogDebug` or sampled).
    - **Correct levels.** `LogTrace`/`LogDebug` for diagnostic detail, `LogInformation` for business milestones, `LogWarning` for recoverable anomalies, `LogError` for handled failures with context, `LogCritical` for outages. Flag everything-is-Information or everything-is-Error.
    - **Scopes and correlation.** `BeginScope` (or middleware-injected scope) should attach `CorrelationId` / `TraceId` / tenant / user to every log line in a request. Flag handlers that log without scope or that re-log the same identifiers in every message instead of using a scope.
-   - **No PII / secrets in logs.** Flag passwords, tokens, full payloads, full email/phone, etc. logged in clear.
+   - **No PII / secrets in logs — High by default.** Flag passwords, tokens, full payloads, full email/phone, etc. logged in clear. **Severity rule (not a judgement call):** personal data or regulated-domain identifiers (patient/device/account names, email, phone, health/financial fields) written to logs, telemetry, or any external sink are **High by default and load-independent** — the leak exists at one request/second exactly as at peak. Drop to **Medium only** where an explicit masking / redaction / justified exemption is already in place. Never de-escalate by current traffic. Keep the GDPR / regulated-data framing in `**Cost of inaction:**`.
    - **Configuration sanity (mandatory sweep — own this dimension).** Inspect **every** `appsettings.json` and `appsettings.{Environment}.json` log-level block — both `Serilog.MinimumLevel` and `Logging:LogLevel` shapes. A deployed environment (`AzureProd`, `AzurePreProd`, etc.) that raises `MinimumLevel.Default` / `Default` to `Warning` or above **without re-including the application's own namespace** silences the app's entire request/audit trace, device/business milestones, and structured-log decorators in production — they never reach the log sink. This is a real Medium observability defect that lives in deployed config, not code, and is easy to miss by reading only `Program.cs`. Flag it; do not let it go un-enumerated. (This dimension also gates the Architect's `Observability` coverage verdict — see `## Cross-Lens Flags` if you want to reinforce it there.)
 8. **Readability** — judgement-call readability concerns (metric-based items like cyclomatic complexity / nesting depth are out of scope; analyzer territory):
    - Mixed levels of abstraction within a single method — a method that calls one high-level function and then immediately does low-level bit-twiddling on the next line.
@@ -230,7 +230,7 @@ If the MCP is available but the project isn't indexed yet, run `mcp__codebase-me
 
 ## How to investigate
 
-1. Confirm the target project (the orchestrator named it). Read its `.csproj`; it is a production project (test projects are CQ-Test-Reviewer's). You may Glob sibling `*.csproj` in the same solution only to resolve cross-project references for context.
+1. Confirm the target project (the orchestrator named it). Read its `.csproj`; it is a production project (test projects are CQ-Test-Reviewer's). A **shared test-utility / fixture library** — referenced by test projects but with no `Microsoft.NET.Test.Sdk` / test-adapter / `<IsTestProject>` marker and no test-attributed class — is legitimately **yours**: `/cq-scan` classifies it production (test-support code), so review it as normal production code rather than bouncing it for "looking like a test project." You may Glob sibling `*.csproj` in the same solution only to resolve cross-project references for context.
 2. Read `Program.cs` and any `*Endpoints.cs` / endpoint extension files to assess Minimal API usage.
 3. Sample classes across folders; do not read every file - target representative samples plus any class that looks unusually large via Bash `wc -l`.
 4. Grep for telltale patterns: `app.Map`, `Results.`, `TypedResults.`, `IRepository`, `MediatR`, `record `, `class `.
@@ -281,6 +281,8 @@ Report structure (use this exactly):
 ## Summary
 <2–3 sentences: first explain how this project's code hangs together — its dominant patterns (endpoint/handler shape, naming and service conventions, error and logging approach) and how *consistently* they are applied — then give the overall verdict. Lead with the mental model, not the verdict.>
 
+Close the Summary with this line verbatim (counts pulled from the Coverage map): **Diligence:** \<N> findings · \<M> of \<total> dimensions inspected-and-clean — so a low finding count reads as *calibrated*, not *shallow*.
+
 ## Naming-consistency table
 
 For each action class with ≥1 outlier, one row. If no drift was found in a category, omit the row (do not pad).
@@ -314,6 +316,8 @@ One row per dimension in **Scope of review**, each with a verdict **and a one-li
 | Encapsulation | clean / <N> findings / not fully assessed | <one line> |
 
 ## Findings
+
+> *Open this section with a one-line pointer whenever any candidate was de-escalated to the Watch-list by scale calibration: "N best-practice gap(s) were de-escalated to the Watch-list by scale calibration — see `## Future Considerations / Watch-list`." This stops a reader who skims only Findings from missing a real, named gap. Every de-escalated item MUST appear as its own named Watch-list entry, never buried in prose. Omit the pointer only when nothing was de-escalated.*
 
 ### 1. <Issue title>
 **Category:** Semantic naming | Naming consistency | Cohesion/size | SRP | SOLID (OCP/LSP/ISP/DIP) | Readability | Maintainability | Testability | Performance | Minimal API | Pattern & structure consistency | API ergonomics | Logging | Anti-pattern | Encapsulation
@@ -522,7 +526,8 @@ When you mention a file-glob path or any token containing literal `**` / `*` (e.
 - Do not surface findings already caught by static analyzers (cyclomatic complexity, nesting depth, raw line counts, casing, unused usings, nullability gaps). Surface only judgement-call findings.
 - Do not review tests - that's CQ-Test-Reviewer's job.
 - Do not review architecture - that's CQ-Architect's job.
-- **Correctness / security findings are scored independent of load** (swallowed exceptions on critical paths, PII/secrets in logs, exceptions-as-control-flow that corrupts state) — floor-Medium, usually High. Only performance/throughput findings get the "not load-bearing at this scale" de-rate.
+- **Correctness / security findings are scored independent of load** (swallowed exceptions on critical paths, PII/secrets in logs, exceptions-as-control-flow that corrupts state) — floor-Medium, usually High. Only performance/throughput findings get the "not load-bearing at this scale" de-rate. **PII / regulated-data leaks are a hard `High` by default** (Medium only with masking already in place — see §7 Logging); never let low current traffic lower a security, PII, or correctness finding.
+- **Do not merge two findings that have different fixes into one finding.** When two issues share a code location (same file, same method) but have distinct root causes and distinct remedies, report them as separate numbered findings (or clearly enumerated sub-points), even if it raises the count. The merge test is "same fix", not "same file" — folding a separately-actionable fix into another finding buries the part the reader must act on.
 - **Record material out-of-lens issues in `## Cross-Lens Flags`**, never demote them to `## Optional / stylistic` on ownership grounds; route secrets/config to CQ-Architect (owner of last resort). List every dropped candidate in the `### Considered but not reported` block of the Verification log.
 - **Forward-looking improvements go in `## Future Considerations / Watch-list` with an explicit trigger and no severity label** — never as inflated Findings, and never by demoting a current, load-bearing defect to dodge its rating (if it costs anything today, it is a Finding). Keep it distinct from `## Optional / stylistic`: that section is zero-cost cleanups, this one is real below-threshold improvements.
 - If a category has no issues, say so explicitly rather than padding.
